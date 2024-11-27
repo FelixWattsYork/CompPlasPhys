@@ -9,6 +9,7 @@ import pickle
 import scipy 
 import math
 from scipy.optimize import curve_fit
+import time
 
 import matplotlib.pyplot as plt # Matplotlib plotting library
 
@@ -280,10 +281,12 @@ Load_name = "good.pickle"
 import pickle
  
 class MyClass():
-    def __init__(self,pos,vel,ncells,L,s):
+    def __init__(self,pos,vel,npart,ncells,cal_time,L,s):
         self.pos = pos
         self.vel = vel
+        self.npart = npart
         self.ncells = ncells
+        self.cal_time = cal_time
         self.L = L
         self.s = s
  
@@ -305,6 +308,30 @@ def load_object(filename):
 def  damping(t,a,d):
     return a*np.exp(-d*t)
 
+n = 5  # Number of pairs (10^n, 5*10^n) you want
+powers_of_ten = 10 ** np.arange(n)
+array = np.empty(2 * n, dtype=int)  # Create an empty array of the required size
+array[0::2] = powers_of_ten        # Assign 10^n to even indices
+array[1::2] = 5 * powers_of_ten    # Assign 5 * 10^n to odd indices
+
+particle_numbers = array
+cell_numbers = array
+
+def run_list():
+    for npart in particle_numbers:
+        for ncells in cell_numbers:
+            L = 4.*pi
+            s = Summary()                 # Calculates, stores and prints summary info
+
+            diagnostics_to_run = [s]   # Remove p to get much faster code!
+
+            # Run the simulation
+            pos, vel = run(pos, vel, L, ncells, 
+                        out = diagnostics_to_run,        # These are called each output step
+                        output_times=linspace(0.,20,50)) # The times to output
+            obj = MyClass(pos,vel,npart,ncells,cal_time,L,s)
+            Save_name = "pn{}_cn{}".format(npart,ncells)
+            save_object(obj,"data/"+Save_name)
 
 if __name__ == "__main__":
     if Load == 0:
