@@ -463,14 +463,14 @@ def Compare_runs():
 
     #plots at constant Particle number
     times_2d = []
-    particle_number_2d = []
+    cell_number_2d = []
     frequencies_2d = []
     frequency_errors_2d = []
     noise_levels_2d = []
     damping_rates_2d = []
     for npart in particle_numbers_loc:
         times = []
-        particle_number = []
+        cell_number = []
         frequencies = []
         frequency_errors = []
         noise_levels = []
@@ -478,13 +478,13 @@ def Compare_runs():
         for obj in run_objs:
             if obj.npart == npart:
                 times.append(obj.cal_time)
-                particle_number.append(obj.npart)
+                cell_number.append(obj.ncell)
                 frequencies.append(obj.frequency)
                 frequency_errors.append(obj.frequency_error)
                 noise_levels.append(obj.noise_level)
                 damping_rates.append(obj.damping_rate)
         times_2d.append(times)
-        particle_number_2d.append(particle_number)
+        cell_number_2d.append(cell_number)
         frequencies_2d.append(frequencies)
         frequency_errors_2d.append(frequency_errors)
         noise_levels_2d.append(noise_levels)
@@ -492,34 +492,34 @@ def Compare_runs():
     #time plots
     fig, axs = plt.subplots(2,2)
     axs[0,0]
-    for n in range (0,len(cell_numbers_loc)):
-        axs[0,0].plot(particle_number_2d[n],times_2d[n],label="cell number = {}".format(cell_numbers_loc[n]))
+    for n in range (0,len(particle_numbers_loc)):
+        axs[0,0].plot(cell_number_2d[n],times_2d[n],label="cell number = {}".format(particle_numbers_loc[n]))
     axs[0,0].legend()
-    axs[0,0].set_xlabel("Particle Numbers")
+    axs[0,0].set_xlabel("cell Numbers")
     axs[0,0].set_ylabel("Run Times")
 
     #frequencies plots
     
-    for n in range (0,len(cell_numbers_loc)):
-        axs[0,1].plot(particle_number_2d[n],frequencies_2d[n],label="cell number = {}".format(cell_numbers_loc[n]))
+    for n in range (0,len(particle_numbers_loc)):
+        axs[0,1].plot(cell_number_2d[n],frequencies_2d[n],label="cell number = {}".format(particle_numbers_loc[n]))
     axs[0,1].legend()
-    axs[0,1].set_xlabel("Particle Numbers")
+    axs[0,1].set_xlabel("cell Numbers")
     axs[0,1].set_ylabel("Frequencies")
 
     #noise_level plots
   
-    for n in range (0,len(cell_numbers_loc)):
-        axs[1,0].plot(particle_number_2d[n],noise_levels_2d[n],label="cell number = {}".format(cell_numbers_loc[n]))
+    for n in range (0,len(particle_numbers_loc)):
+        axs[1,0].plot(cell_number_2d[n],noise_levels_2d[n],label="cell number = {}".format(cell_numbers_loc[n]))
     axs[1,0].legend()
-    axs[1,0].set_xlabel("Particle Numbers")
+    axs[1,0].set_xlabel("cellNumbers")
     axs[1,0].set_ylabel("noise_level")
    
     #damping_rates plots
  
-    for n in range (0,len(cell_numbers_loc)):
-        axs[1,1].plot(particle_number_2d[n],damping_rates_2d[n],label="cell number = {}".format(cell_numbers_loc[n]))
+    for n in range (0,len(particle_numbers_loc)):
+        axs[1,1].plot(cell_number_2d[n],damping_rates_2d[n],label="cell number = {}".format(cell_numbers_loc[n]))
     axs[1,1].legend()
-    axs[1,1].set_xlabel("Particle Numbers")
+    axs[1,1].set_xlabel("cell Numbers")
     axs[1,1].set_ylabel("damping_rates")
     plt.ioff() # This so that the windows stay open
     plt.show()
