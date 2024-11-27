@@ -7,7 +7,8 @@ from numpy import sin, cos, sqrt, random, histogram, abs, sqrt, max
 import numpy as np
 import pickle
 import scipy 
-from scipy import signal
+import math
+from scipy.optimize import curve_fit
 
 import matplotlib.pyplot as plt # Matplotlib plotting library
 
@@ -274,7 +275,7 @@ def twostream(npart, L, vbeam=2):
 
 Load  = 1
 Save_name = "run.pickle"
-Load_name = "run.pickle"
+Load_name = "good.pickle"
 
 import pickle
  
@@ -300,12 +301,16 @@ def load_object(filename):
     except Exception as ex:
         print("Error during unpickling object (Possibly unsupported):", ex)
 
+    
+def  damping(t,a,d):
+    return a*np.exp(-d*t)
+
 
 if __name__ == "__main__":
     if Load == 0:
         # Generate initial condition
         # 
-        npart = 1000   
+        npart = 10000   
         if False:
             # 2-stream instability
             L = 100
@@ -336,29 +341,45 @@ if __name__ == "__main__":
     # Summary stores an array of the first-harmonic amplitude
     # Make a semilog plot to see exponential damping
     extrema = scipy.signal.argrelextrema(np.array(s.firstharmonic),np.greater)[0]
-    extrema_t = []
-    extrema_harm = []
-    first_largest = 0
+    extrema_t = [s.t[0]]
+    extrema_harm = [s.firstharmonic[0]]
+    first_largest = -1
+    sign = -1
     for n in extrema:
         extrema_t.append(s.t[n])
         extrema_harm.append(s.firstharmonic[n])
     for n in range (1,len(extrema_harm)):
             if extrema_harm[n]>extrema_harm[n-1]:
                 first_largest = extrema[n]
+                sign = n
                 break
-    print(s.t[first_largest])
-    sig  = s.firstharmonic[0:first_largest]
-    sig_time = s.t[0:first_largest]
-    noise = s.firstharmonic[first_largest:-1]
-    noise_time = s.t[first_largest:-1]
+    print(sign)
+    extrema_harm = np.array(extrema_harm)
+    extrema_t = np.array(extrema_t)
+    sig  = np.array(s.firstharmonic[0:first_largest])
+    sig_time = np.array(s.t[0:first_largest])
+    noise = np.array(s.firstharmonic[first_largest:-1])
+    noise_time = np.array(s.t[first_largest:-1])
+    sig_peaks = extrema_harm[0:sign]
+    sig_t = extrema_t[0:sign]
+
+    #calculating spacing between peaks
+    ave = []
+    for n in range (1,len(extrema_t)):
+        ave.append(extrema_t[n]-extrema_t[n-1])
+    average = np.mean(ave)
+    error = np.std(ave)
+    popt,pcov = curve_fit(damping,sig_t,sig_peaks)
+    print("pot ",*popt)
+    print("average ", average)
+    print("frequency ",1/average)
     plt.figure()
     plt.plot(sig_time,sig)
     plt.plot(noise_time,noise)
-    plt.scatter(extrema_t, extrema_harm)
+    plt.scatter(sig_t, sig_peaks)
+    plt.plot(sig_t,damping(sig_t,*popt))
     plt.xlabel("Time [Normalised]")
     plt.ylabel("First harmonic amplitude [Normalised]")
     plt.yscale('log')
     plt.ioff() # This so that the windows stay open
     plt.show()
-    
-  
