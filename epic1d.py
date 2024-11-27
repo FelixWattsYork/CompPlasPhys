@@ -4,6 +4,8 @@
 
 from numpy import arange, concatenate, zeros, linspace, floor, array, pi
 from numpy import sin, cos, sqrt, random, histogram, abs, sqrt, max
+import numpy as np
+import pickle
 
 import matplotlib.pyplot as plt # Matplotlib plotting library
 
@@ -268,32 +270,67 @@ def twostream(npart, L, vbeam=2):
 
 ####################################################################
 
-if __name__ == "__main__":
-    # Generate initial condition
-    # 
-    npart = 1000   
-    if False:
-        # 2-stream instability
-        L = 100
-        ncells = 20
-        pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
-    else:
-        # Landau damping
-        L = 4.*pi
-        ncells = 20
-        pos, vel = landau(npart, L)
-    
-    # Create some output classes
-    p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
-    s = Summary()                 # Calculates, stores and prints summary info
+Load  = 1
+Save_name = "run.pickle"
+Load_name = "run.pickle"
 
-    diagnostics_to_run = [p, s]   # Remove p to get much faster code!
-    
-    # Run the simulation
-    pos, vel = run(pos, vel, L, ncells, 
-                   out = diagnostics_to_run,        # These are called each output step
-                   output_times=linspace(0.,20,50)) # The times to output
-    
+import pickle
+ 
+class MyClass():
+    def __init__(self,pos,vel,ncells,L,s):
+        self.pos = pos
+        self.vel = vel
+        self.ncells = ncells
+        self.L = L
+        self.s = s
+ 
+def save_object(obj,filename):
+    try:
+        with open(filename, "wb") as f:
+            pickle.dump(obj, f, protocol=pickle.HIGHEST_PROTOCOL)
+    except Exception as ex:
+        print("Error during pickling object (Possibly unsupported):", ex)
+
+def load_object(filename):
+    try:
+        with open(filename, "rb") as f:
+            return pickle.load(f)
+    except Exception as ex:
+        print("Error during unpickling object (Possibly unsupported):", ex)
+
+
+if __name__ == "__main__":
+    if Load == 0:
+        # Generate initial condition
+        # 
+        npart = 1000   
+        if False:
+            # 2-stream instability
+            L = 100
+            ncells = 20
+            pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
+        else:
+            # Landau damping
+            L = 4.*pi
+            ncells = 20
+            pos, vel = landau(npart, L)
+        # Create some output classes
+        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+        s = Summary()                 # Calculates, stores and prints summary info
+
+        diagnostics_to_run = [p, s]   # Remove p to get much faster code!
+        
+
+        # Run the simulation
+        pos, vel = run(pos, vel, L, ncells, 
+                    out = diagnostics_to_run,        # These are called each output step
+                    output_times=linspace(0.,20,50)) # The times to output
+        obj = MyClass(pos,vel,ncells,L,s)
+        save_object(obj,Save_name)
+    elif Load == 1:
+        obj = load_object(Load_name)
+        pos,vel,ncells,L,s = obj.pos,obj.vel,obj.ncells,obj.L,obj.s
+        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
     # Summary stores an array of the first-harmonic amplitude
     # Make a semilog plot to see exponential damping
     plt.figure()
@@ -301,8 +338,7 @@ if __name__ == "__main__":
     plt.xlabel("Time [Normalised]")
     plt.ylabel("First harmonic amplitude [Normalised]")
     plt.yscale('log')
-    
     plt.ioff() # This so that the windows stay open
     plt.show()
     
-    
+  
