@@ -353,7 +353,7 @@ def load_object(filename):
 
 
 particle_numbers = [1000,2000,5000,10000]
-cell_numbers = [10,20,30,40]
+cell_numbers = [10,20,30,40,50,60,70,80,90,100]
 
 print(particle_numbers)
 
@@ -389,7 +389,7 @@ def run_list():
 
 def Compare_runs():
     particle_numbers_loc = [1000,2000,5000,10000]
-    cell_numbers_loc = [10,20,30,40]
+    cell_numbers_loc = [10,20,30,40,50,60,70,80,90]
     run_objs = []
     for npart in particle_numbers_loc:
         for ncells in cell_numbers_loc:
@@ -457,8 +457,8 @@ def Compare_runs():
     axs[1,1].legend()
     axs[1,1].set_xlabel("Particle Numbers")
     axs[1,1].set_ylabel("damping_rates")
+    fig.suptitle("Plots at constant Cell Number", fontsize=16)
     plt.ioff() # This so that the windows stay open
-    plt.show()
 
 
     #plots at constant Particle number
@@ -478,7 +478,7 @@ def Compare_runs():
         for obj in run_objs:
             if obj.npart == npart:
                 times.append(obj.cal_time)
-                cell_number.append(obj.ncell)
+                cell_number.append(obj.ncells)
                 frequencies.append(obj.frequency)
                 frequency_errors.append(obj.frequency_error)
                 noise_levels.append(obj.noise_level)
@@ -493,7 +493,7 @@ def Compare_runs():
     fig, axs = plt.subplots(2,2)
     axs[0,0]
     for n in range (0,len(particle_numbers_loc)):
-        axs[0,0].plot(cell_number_2d[n],times_2d[n],label="cell number = {}".format(particle_numbers_loc[n]))
+        axs[0,0].plot(cell_number_2d[n],times_2d[n],label="Particle number = {}".format(particle_numbers_loc[n]))
     axs[0,0].legend()
     axs[0,0].set_xlabel("cell Numbers")
     axs[0,0].set_ylabel("Run Times")
@@ -501,7 +501,7 @@ def Compare_runs():
     #frequencies plots
     
     for n in range (0,len(particle_numbers_loc)):
-        axs[0,1].plot(cell_number_2d[n],frequencies_2d[n],label="cell number = {}".format(particle_numbers_loc[n]))
+        axs[0,1].plot(cell_number_2d[n],frequencies_2d[n],label="Particle number = {}".format(particle_numbers_loc[n]))
     axs[0,1].legend()
     axs[0,1].set_xlabel("cell Numbers")
     axs[0,1].set_ylabel("Frequencies")
@@ -509,7 +509,7 @@ def Compare_runs():
     #noise_level plots
   
     for n in range (0,len(particle_numbers_loc)):
-        axs[1,0].plot(cell_number_2d[n],noise_levels_2d[n],label="cell number = {}".format(cell_numbers_loc[n]))
+        axs[1,0].plot(cell_number_2d[n],noise_levels_2d[n],label="Particle number = {}".format(cell_numbers_loc[n]))
     axs[1,0].legend()
     axs[1,0].set_xlabel("cellNumbers")
     axs[1,0].set_ylabel("noise_level")
@@ -517,10 +517,11 @@ def Compare_runs():
     #damping_rates plots
  
     for n in range (0,len(particle_numbers_loc)):
-        axs[1,1].plot(cell_number_2d[n],damping_rates_2d[n],label="cell number = {}".format(cell_numbers_loc[n]))
+        axs[1,1].plot(cell_number_2d[n],damping_rates_2d[n],label="Particle number = {}".format(cell_numbers_loc[n]))
     axs[1,1].legend()
     axs[1,1].set_xlabel("cell Numbers")
     axs[1,1].set_ylabel("damping_rates")
+    fig.suptitle("Plots at constant Particle Number", fontsize=16)
     plt.ioff() # This so that the windows stay open
     plt.show()
     
