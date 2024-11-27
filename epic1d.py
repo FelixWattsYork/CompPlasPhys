@@ -6,6 +6,8 @@ from numpy import arange, concatenate, zeros, linspace, floor, array, pi
 from numpy import sin, cos, sqrt, random, histogram, abs, sqrt, max
 import numpy as np
 import pickle
+import scipy 
+from scipy import signal
 
 import matplotlib.pyplot as plt # Matplotlib plotting library
 
@@ -333,8 +335,26 @@ if __name__ == "__main__":
         p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
     # Summary stores an array of the first-harmonic amplitude
     # Make a semilog plot to see exponential damping
+    extrema = scipy.signal.argrelextrema(np.array(s.firstharmonic),np.greater)[0]
+    extrema_t = []
+    extrema_harm = []
+    first_largest = 0
+    for n in extrema:
+        extrema_t.append(s.t[n])
+        extrema_harm.append(s.firstharmonic[n])
+    for n in range (1,len(extrema_harm)):
+            if extrema_harm[n]>extrema_harm[n-1]:
+                first_largest = extrema[n]
+                break
+    print(s.t[first_largest])
+    sig  = s.firstharmonic[0:first_largest]
+    sig_time = s.t[0:first_largest]
+    noise = s.firstharmonic[first_largest:-1]
+    noise_time = s.t[first_largest:-1]
     plt.figure()
-    plt.plot(s.t, s.firstharmonic)
+    plt.plot(sig_time,sig)
+    plt.plot(noise_time,noise)
+    plt.scatter(extrema_t, extrema_harm)
     plt.xlabel("Time [Normalised]")
     plt.ylabel("First harmonic amplitude [Normalised]")
     plt.yscale('log')
