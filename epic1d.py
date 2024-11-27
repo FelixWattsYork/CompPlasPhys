@@ -4,9 +4,11 @@
 
 from numpy import arange, concatenate, zeros, linspace, floor, array, pi
 from numpy import sin, cos, sqrt, random, histogram, abs, sqrt, max
-
+from joblib import Parallel, delayed
+import time as tm
 import matplotlib.pyplot as plt # Matplotlib plotting library
-
+import numpy as np
+start_time = tm.time()
 try:
     import matplotlib.gridspec as gridspec  # For plot layout grid
     got_gridspec = True
@@ -29,6 +31,8 @@ def rk4step(f, y0, dt, args=()):
 
     return y0 + (k1 + 2.*k2 + 2.*k3 + k4)*dt / 6.
 
+thread_number = 12
+parallel = Parallel(n_jobs=thread_number, return_as="generator", prefer="threads")
 def calc_density(position, ncells, L):
     """ Calculate charge density given particle positions
     
@@ -43,18 +47,30 @@ def calc_density(position, ncells, L):
     """
     # This is a crude method and could be made more efficient
     
-    density = zeros([ncells])
+    density_list = []
     nparticles = len(position)
     
-    dx = L / ncells       # Uniform cell spacing
-    for p in position / dx:    # Loop over all the particles, converting position into a cell number
-        plower = int(p)        # Cell to the left (rounding down)
-        offset = p - plower    # Offset from the left
-        density[plower] += 1. - offset
-        density[(plower + 1) % ncells] += offset
+    y = position*ncells/L
+    w = np.array_split(y, thread_number)
+    multiplier = float(ncells) / float(nparticles)
+
+    density_list = parallel(delayed(quater)(z,ncells,multiplier) for z in w)
+    density = np.array([sum(x) for x in zip(*density_list)])
     # nparticles now distributed amongst ncells
-    density *= float(ncells) / float(nparticles)  # Make average density equal to 1
+    # density *= float(ncells) / float(nparticles)  # Make average density equal to 1
     return density
+
+def quater(z,ncells,multiplier):
+    density2 = [parl_thing(p,ncells) for p in z]
+    return np.array([sum(x)*multiplier for x in zip(*density2)]) 
+
+def parl_thing(p,ncells):
+    desnity_modification = zeros([ncells])
+    plower = int(p)        # Cell to the left (rounding down)
+    offset = p - plower    # Offset from the left
+    desnity_modification[plower] = 1. - offset
+    desnity_modification[(plower + 1) % ncells] = offset
+    return desnity_modification
 
 def periodic_interp(y, x):
     """
@@ -160,6 +176,8 @@ def run(pos, vel, L, ncells=None, out=[], output_times=linspace(0,20,100), cfl=0
         # Send to output functions
         for func in out:
             func(pos, vel, ncells, L, time)
+        print("--- %s seconds ---" % (tm.time() - start_time))
+        print(thread_number)
         
     return pos, vel
 
@@ -271,7 +289,7 @@ def twostream(npart, L, vbeam=2):
 if __name__ == "__main__":
     # Generate initial condition
     # 
-    npart = 1000   
+    npart = 10000   
     if False:
         # 2-stream instability
         L = 100
@@ -287,7 +305,7 @@ if __name__ == "__main__":
     p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
     s = Summary()                 # Calculates, stores and prints summary info
 
-    diagnostics_to_run = [p, s]   # Remove p to get much faster code!
+    diagnostics_to_run = []   # Remove p to get much faster code!
     
     # Run the simulation
     pos, vel = run(pos, vel, L, ncells, 
@@ -296,6 +314,7 @@ if __name__ == "__main__":
     
     # Summary stores an array of the first-harmonic amplitude
     # Make a semilog plot to see exponential damping
+    print("--- %s seconds ---" % (time.time() - start_time))
     plt.figure()
     plt.plot(s.t, s.firstharmonic)
     plt.xlabel("Time [Normalised]")

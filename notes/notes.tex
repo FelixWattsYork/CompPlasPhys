@@ -1,0 +1,17 @@
+\documentclass[a4paper]{article}
+\begin{document}
+\title{Computational Lab Notebook}
+\author{Felix Watts}
+\date{\today}
+\maketitle
+\section{21-11-2024}
+\subsection{Landau Damping Summary}
+Landua Damping is the effect of the waves lossing their every to particles in the plasma depending on the distribution function of the particles in the palsmna. This effect is the result of two idividual effects. The resonance of the particle with velocities close to the phase velocity of a phase will gain or lose energy to the wave. This effect is not at all similar to how a surf gains velocity from a wave as that is not how surfing works. The amount of energy lost of gained by the wave depends on whether there are more particles with a velocity slightly greater than that than the phase velocity of the wave or more with less. Therefore the energy lost by the wave is determined by the gradient of the velocity funciton of the particles around the phase velocity of the phase. Since in most thermal distributions this graident is negative, the wave usually losses energy. Therefore this effect is called landau damping.
+\subsection{Code Description}
+\subsubsection{RK4}\\
+The PIC Code uses the Runge kunta 4 Integration method, a highly efficent integration method which takes 4 points over an integration length performs a weighted average of them. This method has an accumulated error of the order $O(h^{4)}$. This integration method is not sympletic unlike velocity verlet for example. 
+\subsubsection{Density Calculation}
+The Cal_density calculates the density of the particles using the cloud in cell method. Since only the position of particles is calcluated this is important. 
+\subsubsection{PIC}
+The Pic Code which evolves the particles in time, for each timestep 
+\end{document}
