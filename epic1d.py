@@ -280,7 +280,7 @@ def twostream(npart, L, vbeam=2):
 
 Load  = 1
 Save_name = "run.pickle"
-Load_name = "run.pickle"
+Load_name = "data/pn2000_cn50"
 
 import pickle
  
@@ -320,8 +320,13 @@ class Run_Outcome():
         sig_time = np.array(self.s.t[0:first_largest])
         noise = np.array(self.s.firstharmonic[first_largest:-1])
         noise_time = np.array(self.s.t[first_largest:-1])
-        if len(noise_time)>1:
-            self.noise_level = (noise_time[-1]-noise_time[0])/sig_time[-1] 
+        noise_average_sqaure = np.mean(noise)**2
+        sig_average_sqaure = np.mean(sig)**2
+
+
+        if noise_average_sqaure>0:
+            self.noise_level = sig_average_sqaure/noise_average_sqaure
+
         sig_peaks = extrema_harm[0:sign]
         sig_t = extrema_t[0:sign]
 
@@ -339,7 +344,10 @@ class Run_Outcome():
         if len(sig_t)>1:
             popt,pcov = curve_fit(damping,sig_t,sig_peaks)
             self.damping_rate = popt[1]
-            self.damping_error = np.sqrt(pcov[1])
+            print(self.damping_rate)
+            self.damping_error = np.sqrt(pcov[1][1])
+            print(self.damping_error)
+            print("damp")
 
     def plot(self):
         extrema = scipy.signal.argrelextrema(np.array(self.s.firstharmonic),np.greater)[0]
@@ -364,8 +372,12 @@ class Run_Outcome():
         sig_time = np.array(self.s.t[:first_largest])
         noise = np.array(self.s.firstharmonic[first_largest:])
         noise_time = np.array(self.s.t[first_largest:])
-        if len(noise_time)>1:
-            self.noise_level = (noise_time[-1]-noise_time[0])/sig_time[-1] 
+        noise_average_sqaure = np.mean(noise)**2
+        sig_average_sqaure = np.mean(sig)**2
+
+
+        if noise_average_sqaure>0:
+            self.noise_level = sig_average_sqaure/noise_average_sqaure
         sig_peaks = extrema_harm[:sign]
         sig_t = extrema_t[:sign]
         #calculating spacing between peaks
@@ -378,6 +390,7 @@ class Run_Outcome():
         self.frequency_error = period_error*period**(-2)
         print("frequency = {}".format(self.frequency))
         print("frequency_error = {}".format(self.frequency_error))
+        print("noise level = {}".format(self.noise_level))
         if len(sig_t)>1:
             popt,pcov = curve_fit(damping,sig_t,sig_peaks)
             self.damping_rate = popt[1]
@@ -492,39 +505,40 @@ def Compare_runs():
         noise_levels_2d.append(noise_levels)
         damping_rates_2d.append(damping_rates)
         damping_rates_errors_2d.append(damping_rate_errors)
-    #time plots
+    #2time plots
     fig, axs = plt.subplots(2,2)
     axs[0,0]
     for n in range (0,len(cell_numbers_loc)):
         axs[0,0].plot(particle_number_2d[n],times_2d[n],label="cell number = {}".format(cell_numbers_loc[n]))
-    axs[0,0].legend()
-    axs[0,0].set_xlabel("Particle Numbers")
-    axs[0,0].set_ylabel("Run Times")
+    axs[0,0].set_xlabel("Particle Number")
+    axs[0,0].set_ylabel("Run Times (s)")
 
     #frequencies plots
     
     for n in range (0,len(cell_numbers_loc)):
-        axs[0,1].errorbar(particle_number_2d[n],frequencies_2d[n],yerr=frequency_errors_2d[n],label="cell number = {}".format(cell_numbers_loc[n]))
-    axs[0,1].legend()
-    axs[0,1].set_xlabel("Particle Numbers")
-    axs[0,1].set_ylabel("Frequencies")
+        axs[0,1].plot(particle_number_2d[n],frequencies_2d[n])
+        axs[0,1].fill_between(particle_number_2d[n],np.array(frequencies_2d[n])+np.array(frequency_errors_2d[n]),np.array(frequencies_2d[n])-np.array(frequency_errors_2d[n]),alpha=0.2)
+    axs[0,1].set_xlabel("Particle Number")
+    axs[0,1].set_ylabel("Frequencies (Hz)")
 
-    #noise_level plots
+    #Noise Level plots
   
     for n in range (0,len(cell_numbers_loc)):
-        axs[1,0].plot(particle_number_2d[n],noise_levels_2d[n],label="cell number = {}".format(cell_numbers_loc[n]))
-    axs[1,0].legend()
-    axs[1,0].set_xlabel("Particle Numbers")
-    axs[1,0].set_ylabel("noise_level")
+        axs[1,0].plot(particle_number_2d[n],noise_levels_2d[n])
+    axs[1,0].set_xlabel("Particle Number")
+    axs[1,0].set_ylabel("Noise Level")
    
-    #damping_rates plots
+    #damping rates plots
  
     for n in range (0,len(cell_numbers_loc)):
-        axs[1,1].errorbar(particle_number_2d[n],damping_rates_2d[n],yerr=damping_rates_errors_2d[n],label="cell number = {}".format(cell_numbers_loc[n]))
-    axs[1,1].legend()
-    axs[1,1].set_xlabel("Particle Numbers")
-    axs[1,1].set_ylabel("damping_rates")
+        axs[1,1].plot(particle_number_2d[n],damping_rates_2d[n])
+        axs[1,1].fill_between(particle_number_2d[n], np.array(damping_rates_2d[n])-np.array(damping_rates_errors_2d[n]), np.array(damping_rates_2d[n])+np.array(damping_rates_errors_2d[n]),alpha=0.2)
+    axs[1,1].set_xlabel("Particle Number")
+    axs[1,1].set_ylabel("Damping Rate")
     fig.suptitle("Plots at constant Cell Number", fontsize=16)
+    lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
+    lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+    fig.legend(lines, labels, loc = (0.5, 1))
     plt.ioff() # This so that the windows stay open
 
 
@@ -543,6 +557,7 @@ def Compare_runs():
         frequency_errors = []
         noise_levels = []
         damping_rates = []
+        damping_rate_errors = []
         for obj in run_objs:
             if obj.npart == npart:
                 times.append(obj.cal_time)
@@ -564,34 +579,39 @@ def Compare_runs():
     axs[0,0]
     for n in range (0,len(particle_numbers_loc)):
         axs[0,0].plot(cell_number_2d[n],times_2d[n],label="Particle number = {}".format(particle_numbers_loc[n]))
-    axs[0,0].legend()
-    axs[0,0].set_xlabel("cell Numbers")
-    axs[0,0].set_ylabel("Run Times")
+    #axs[0,0].legend()
+    axs[0,0].set_xlabel("Cell Number")
+    axs[0,0].set_ylabel("Run Time (s)")
 
     #frequencies plots
     
     for n in range (0,len(particle_numbers_loc)):
-        axs[0,1].errorbar(cell_number_2d[n],frequencies_2d[n],yerr=frequency_errors_2d[n],label="Particle number = {}".format(particle_numbers_loc[n]))
-    axs[0,1].legend()
-    axs[0,1].set_xlabel("cell Numbers")
-    axs[0,1].set_ylabel("Frequencies")
+        axs[0,1].plot(cell_number_2d[n],frequencies_2d[n])
+        axs[0,1].fill_between(cell_number_2d[n],np.array(frequencies_2d[n])+np.array(frequency_errors_2d[n]),np.array(frequencies_2d[n])-np.array(frequency_errors_2d[n]),alpha=0.2)
+    #axs[0,1].legend()
+    axs[0,1].set_xlabel("Cell Number")
+    axs[0,1].set_ylabel("Frequency (Hz)")
 
-    #noise_level plots
+    #Noise Level plots
   
     for n in range (0,len(particle_numbers_loc)):
-        axs[1,0].plot(cell_number_2d[n],noise_levels_2d[n],label="Particle number = {}".format(cell_numbers_loc[n]))
-    axs[1,0].legend()
-    axs[1,0].set_xlabel("cellNumbers")
-    axs[1,0].set_ylabel("noise_level")
+        axs[1,0].plot(cell_number_2d[n],noise_levels_2d[n])
+    #axs[1,0].legend()
+    axs[1,0].set_xlabel("Cell Number")
+    axs[1,0].set_ylabel("Noise Level")
    
-    #damping_rates plots
+    #Damping Rates plots
  
     for n in range (0,len(particle_numbers_loc)):
-        axs[1,1].plot(cell_number_2d[n],damping_rates_2d[n],label="Particle number = {}".format(cell_numbers_loc[n]))
-    axs[1,1].legend()
-    axs[1,1].set_xlabel("cell Numbers")
-    axs[1,1].set_ylabel("damping_rates")
+        axs[1,1].plot(cell_number_2d[n],damping_rates_2d[n])
+        axs[1,1].fill_between(cell_number_2d[n], np.array(damping_rates_2d[n])-np.array(damping_rates_errors_2d[n]), np.array(damping_rates_2d[n])+np.array(damping_rates_errors_2d[n]),alpha=0.2)
+    #axs[1,1].legend()
+    axs[1,1].set_xlabel("Cell Numbers")
+    axs[1,1].set_ylabel("Damping Rate")
     fig.suptitle("Plots at constant Particle Number", fontsize=16)
+    lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
+    lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+    fig.legend(lines, labels, loc = (0, 0))
     plt.ioff() # This so that the windows stay open
     plt.show()
     
@@ -602,8 +622,7 @@ if __name__ == "__main__":
     Compare_runs()
     # if Load == 0:
     #     # Generate initial condition
-    #     # 
-    #     npart = 5000   
+    #     npart = 9000   
     #     if False:
     #         # 2-stream instability
     #         L = 100
@@ -629,6 +648,7 @@ if __name__ == "__main__":
     #     time_end= time.perf_counter()
     #     cal_time = time_end-time_start
     #     obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s)
+    #     obj.plot()
     #     save_object(obj,Save_name)
     # elif Load == 1:
     #     obj = load_object(Load_name)
