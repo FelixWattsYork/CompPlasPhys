@@ -280,7 +280,7 @@ def twostream(npart, L, vbeam=2):
 
 Load  = 1
 Save_name = "run.pickle"
-Load_name = "data/pn2000_cn50"
+Load_name = "data/pn200000_cn100"
 
 import pickle
  
@@ -320,8 +320,8 @@ class Run_Outcome():
         sig_time = np.array(self.s.t[0:first_largest])
         noise = np.array(self.s.firstharmonic[first_largest:-1])
         noise_time = np.array(self.s.t[first_largest:-1])
-        noise_average_sqaure = np.mean(noise)**2
-        sig_average_sqaure = np.mean(sig)**2
+        noise_average_sqaure = np.mean(noise**2)
+        sig_average_sqaure = np.mean(sig**2)
 
 
         if noise_average_sqaure>0:
@@ -372,8 +372,8 @@ class Run_Outcome():
         sig_time = np.array(self.s.t[:first_largest])
         noise = np.array(self.s.firstharmonic[first_largest:])
         noise_time = np.array(self.s.t[first_largest:])
-        noise_average_sqaure = np.mean(noise)**2
-        sig_average_sqaure = np.mean(sig)**2
+        noise_average_sqaure = np.mean(noise**2)
+        sig_average_sqaure = np.mean(sig**2)
 
 
         if noise_average_sqaure>0:
@@ -391,9 +391,11 @@ class Run_Outcome():
         print("frequency = {}".format(self.frequency))
         print("frequency_error = {}".format(self.frequency_error))
         print("noise level = {}".format(self.noise_level))
+        #print(self.damping_error)
         if len(sig_t)>1:
             popt,pcov = curve_fit(damping,sig_t,sig_peaks)
             self.damping_rate = popt[1]
+        print(self.damping_rate)
         plt.figure()
         plt.plot(sig_time,sig)
         plt.plot(noise_time,noise)
@@ -520,6 +522,7 @@ def Compare_runs():
         axs[0,1].fill_between(particle_number_2d[n],np.array(frequencies_2d[n])+np.array(frequency_errors_2d[n]),np.array(frequencies_2d[n])-np.array(frequency_errors_2d[n]),alpha=0.2)
     axs[0,1].set_xlabel("Particle Number")
     axs[0,1].set_ylabel("Frequencies (Hz)")
+    axs[0,1].set_ylim(0.18, 0.24)
 
     #Noise Level plots
   
@@ -538,7 +541,7 @@ def Compare_runs():
     fig.suptitle("Plots at constant Cell Number", fontsize=16)
     lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    fig.legend(lines, labels, loc = (0.5, 1))
+    fig.legend(lines, labels, loc = (0.9, 0.8))
     plt.ioff() # This so that the windows stay open
 
 
@@ -611,7 +614,7 @@ def Compare_runs():
     fig.suptitle("Plots at constant Particle Number", fontsize=16)
     lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    fig.legend(lines, labels, loc = (0, 0))
+    fig.legend(lines, labels, loc = (0.85, 0.85))
     plt.ioff() # This so that the windows stay open
     plt.show()
     
