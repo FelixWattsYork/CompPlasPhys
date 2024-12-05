@@ -30,7 +30,8 @@ def  damping(t,a,d):
     return a*np.exp(-d*t)
 
 def growth(t,a,b,c,d):
-    return a*np.tanh(b*t+c)+d
+    ones_array = np.ones(len(t))
+    return a*np.tanh(b*(t+c*ones_array))+d
 
 def rk4step(f, y0, dt, args=()):
     """ Takes a single step using RK4 method """
@@ -302,6 +303,8 @@ class Run_Outcome():
         self.damping_rate = damping_rate
         self.damping_error = damping_rate_error
         self.run_type = run_type
+        self.growth_rate = 0
+        self.growth_point = 0
 
 
     def calculate_values(self):
@@ -436,14 +439,18 @@ class Run_Outcome():
                         break
             extrema_harm = np.array(extrema_harm)
             extrema_t = np.array(extrema_t)
-            popt,pcov = curve_fit(growth,self.s.t,self.s.firstharmonic)
+            popt,pcov = curve_fit(growth,extrema_t,extrema_harm,bounds=([0.,0.,-80.,0.], [1,1,0,1]))
+            self.growth_rate = popt[0]*popt[1]
             plt.figure()
             plt.plot(self.s.t,self.s.firstharmonic)
             plt.scatter(extrema_t,extrema_harm)
-            plt.plot(self.s.t,growth(self.s.t,*popt))
+            print(*popt)
+            plt.plot(extrema_t,growth(np.array(extrema_t),*popt))
+            plt.plot(extrema_t,self.growth_rate*(extrema_t+popt[2])+popt[3])
             plt.xlabel("Time [Normalised]")
             plt.ylabel("First harmonic amplitude [Normalised]")
-            plt.yscale('log')
+            print("growth rate: {}".format(self.growth_rate))
+            #plt.yscale()
             plt.ioff() # This so that the windows stay open
             plt.show()
             
