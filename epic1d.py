@@ -240,7 +240,7 @@ class Summary:
         # Amplitude of the first harmonic
         fh = 2.*abs(fft(d)[1]) / float(ncells)
         
-        print(f"Time: {t} First: {fh}")
+        #print(f"Time: {t} First: {fh}")
         
         self.t.append(t)
         self.firstharmonic.append(fh)
@@ -281,8 +281,8 @@ def twostream(npart, L, vbeam=2):
 
 ####################################################################
 
-Load  = 1
-Save_name = "data_TwoStream/pn50000_cn20.pickle"
+Load  = 0
+Save_name = "data_TwoStream/pn50000_cn20_2.pickle"
 Load_name = "data_TwoStream/pn50000_cn20.pickle"
 Run_type = "TwoStream"
 
@@ -304,7 +304,7 @@ class Run_Outcome():
         self.damping_error = damping_rate_error
         self.run_type = run_type
         self.growth_rate = 0
-        self.growth_point = 0
+        self.growth_error = 0
 
 
     def calculate_values(self):
@@ -432,24 +432,28 @@ class Run_Outcome():
             for n in extrema:
                 extrema_t.append(self.s.t[n])
                 extrema_harm.append(self.s.firstharmonic[n])
-            for n in range (1,len(extrema_harm)-1):
-                    if extrema_harm[n]>extrema_harm[n-1]:
-                        first_largest = extrema[n]
-                        sign = n
-                        break
             extrema_harm = np.array(extrema_harm)
             extrema_t = np.array(extrema_t)
-            popt,pcov = curve_fit(growth,extrema_t,extrema_harm,bounds=([0.,0.,-80.,0.], [1,1,0,1]))
+            # splitting growth data from saturation data
+            largest_index = np.argmax(extrema_harm)
+            growth_data = extrema_harm[:largest_index]
+            growth_t = extrema_t[:largest_index]
+
+
+            popt,pcov = curve_fit(growth,growth_t,growth_data,bounds=([0.,0.,-80.,0.], [1,1,0,1]))
+            perr = np.sqrt(np.diag(pcov))
             self.growth_rate = popt[0]*popt[1]
+            self.growth_error = perr[0]*perr[1]
             plt.figure()
             plt.plot(self.s.t,self.s.firstharmonic)
             plt.scatter(extrema_t,extrema_harm)
             print(*popt)
-            plt.plot(extrema_t,growth(np.array(extrema_t),*popt))
-            plt.plot(extrema_t,self.growth_rate*(extrema_t+popt[2])+popt[3])
+            plt.plot(growth_t,growth(np.array(growth_t),*popt))
+            plt.plot(growth_t,self.growth_rate*(growth_t+popt[2])+popt[3])
             plt.xlabel("Time [Normalised]")
             plt.ylabel("First harmonic amplitude [Normalised]")
             print("growth rate: {}".format(self.growth_rate))
+            print("growth rate error: {}".format(self.growth_error))
             #plt.yscale()
             plt.ioff() # This so that the windows stay open
             plt.show()
@@ -475,41 +479,43 @@ def load_object(filename):
 
 
 
-particle_numbers = [20000,50000,100000,200000]
-cell_numbers = [10,20,30,40,50,60,70,80,90,100]
+particle_numbers = [50000]
+cell_numbers = [20]
+Run_Number = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
 
 print(particle_numbers)
 
 def run_list():
     for npart in particle_numbers:
         for ncells in cell_numbers:
-            print(npart)
-            print(ncells)
-            if Run_type == "TwoStream":
-                # 2-stream instability
-                L = 100
-                ncells = 20
-                pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
-            elif Run_type == "Landau":
-                # Landau damping
-                L = 4.*pi
-                ncells = 20
-                pos, vel = landau(npart, L)
+            for Run in Run_Number:
+                print(npart)
+                print(ncells)
+                if Run_type == "TwoStream":
+                    # 2-stream instability
+                    L = 100
+                    ncells = 20
+                    pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
+                elif Run_type == "Landau":
+                    # Landau damping
+                    L = 4.*pi
+                    ncells = 20
+                    pos, vel = landau(npart, L)
 
-            s = Summary()                 # Calculates, stores and prints summary info
+                s = Summary()                 # Calculates, stores and prints summary info
 
-            diagnostics_to_run = [s]   # Remove p to get much faster code!
-            # Run the simulation
-            time_start = time.perf_counter()
-            pos, vel = run(pos, vel, L, ncells, 
-                        out = diagnostics_to_run,        # These are called each output step
-                        output_times=linspace(0.,20,50)) # The times to output
-            time_end= time.perf_counter()
-            cal_time = time_end-time_start
-            print("completed run, npart = {},ncells = {}, time taken = {}".format(npart,ncells,cal_time))
-            obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s)
-            Save_name = "pn{}_cn{}".format(npart,ncells)
-            save_object(obj,"data_{}/{}".format(Run_type,Save_name))
+                diagnostics_to_run = [s]   # Remove p to get much faster code!
+                # Run the simulation
+                time_start = time.perf_counter()
+                pos, vel = run(pos, vel, L, ncells, 
+                            out = diagnostics_to_run,        # These are called each output step
+                            output_times=linspace(0.,20,50)) # The times to output
+                time_end= time.perf_counter()
+                cal_time = time_end-time_start
+                print("completed run, npart = {},ncells = {}, time taken = {}".format(npart,ncells,cal_time))
+                obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s)
+                Save_name = "pn{}_cn{}_{}".format(npart,ncells,Run)
+                save_object(obj,"data_{}/{}".format(Run_type,Save_name))
 
 def Compare_runs():
     particle_numbers_loc = [5000,10000,20000,50000,100000,200000]
@@ -667,39 +673,39 @@ def Compare_runs():
     
 
 if __name__ == "__main__":
-    # Compare_runs()
-    if Load == 0:
-        # Generate initial condition
-        npart = 50000   
-        if Run_type == "TwoStream":
-            # 2-stream instability
-            L = 100
-            ncells = 50
-            pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
-        elif Run_type == "Landau":
-            # Landau damping
-            L = 4.*pi
-            ncells = 20
-            pos, vel = landau(npart, L)
-        # Create some output classes
-        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
-        s = Summary()                 # Calculates, stores and prints summary info
+    run_list()
+    # if Load == 0:
+    #     # Generate initial condition
+    #     npart = 50000   
+    #     if Run_type == "TwoStream":
+    #         # 2-stream instability
+    #         L = 100
+    #         ncells = 50
+    #         pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
+    #     elif Run_type == "Landau":
+    #         # Landau damping
+    #         L = 4.*pi
+    #         ncells = 20
+    #         pos, vel = landau(npart, L)
+    #     # Create some output classes
+    #     p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+    #     s = Summary()                 # Calculates, stores and prints summary info
 
-        diagnostics_to_run = [s]   # Remove p to get much faster code!
+    #     diagnostics_to_run = [s]   # Remove p to get much faster code!
         
 
-        # Run the simulation
-        time_start = time.perf_counter()
-        pos, vel = run(pos, vel, L, ncells, 
-                    out = diagnostics_to_run,        # These are called each output step
-                    output_times=linspace(0.,80,200)) # The times to output
-        time_end= time.perf_counter()
-        cal_time = time_end-time_start
-        obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s,run_type=Run_type)
-        save_object(obj,Save_name)
-        obj.plot()
-    elif Load == 1:
-        obj = load_object(Load_name)
-        pos,vel,ncells,L,s = obj.pos,obj.vel,obj.ncells,obj.L,obj.s
-        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
-        obj.plot()
+    #     # Run the simulation
+    #     time_start = time.perf_counter()
+    #     pos, vel = run(pos, vel, L, ncells, 
+    #                 out = diagnostics_to_run,        # These are called each output step
+    #                 output_times=linspace(0.,80,200)) # The times to output
+    #     time_end= time.perf_counter()
+    #     cal_time = time_end-time_start
+    #     obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s,run_type=Run_type)
+    #     save_object(obj,Save_name)
+    #     obj.plot()
+    # elif Load == 1:
+    #     obj = load_object(Load_name)
+    #     pos,vel,ncells,L,s = obj.pos,obj.vel,obj.ncells,obj.L,obj.s
+    #     p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+    #     obj.plot()
