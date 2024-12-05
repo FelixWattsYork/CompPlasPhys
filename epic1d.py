@@ -622,39 +622,39 @@ def Compare_runs():
 
 
 if __name__ == "__main__":
-    Compare_runs()
-    # if Load == 0:
-    #     # Generate initial condition
-    #     npart = 9000   
-    #     if False:
-    #         # 2-stream instability
-    #         L = 100
-    #         ncells = 20
-    #         pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
-    #     else:
-    #         # Landau damping
-    #         L = 4.*pi
-    #         ncells = 20
-    #         pos, vel = landau(npart, L)
-    #     # Create some output classes
-    #     p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
-    #     s = Summary()                 # Calculates, stores and prints summary info
+    # Compare_runs()
+    if Load == 0:
+        # Generate initial condition
+        npart = 9000   
+        if False:
+            # 2-stream instability
+            L = 100
+            ncells = 20
+            pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
+        else:
+            # Landau damping
+            L = 4.*pi
+            ncells = 20
+            pos, vel = landau(npart, L)
+        # Create some output classes
+        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+        s = Summary()                 # Calculates, stores and prints summary info
 
-    #     diagnostics_to_run = [p, s]   # Remove p to get much faster code!
+        diagnostics_to_run = [p, s]   # Remove p to get much faster code!
         
 
-    #     # Run the simulation
-    #     time_start = time.perf_counter()
-    #     pos, vel = run(pos, vel, L, ncells, 
-    #                 out = diagnostics_to_run,        # These are called each output step
-    #                 output_times=linspace(0.,20,50)) # The times to output
-    #     time_end= time.perf_counter()
-    #     cal_time = time_end-time_start
-    #     obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s)
-    #     obj.plot()
-    #     save_object(obj,Save_name)
-    # elif Load == 1:
-    #     obj = load_object(Load_name)
-    #     pos,vel,ncells,L,s = obj.pos,obj.vel,obj.ncells,obj.L,obj.s
-    #     p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
-    #     obj.plot()
+        # Run the simulation
+        time_start = time.perf_counter()
+        pos, vel = run(pos, vel, L, ncells, 
+                    out = diagnostics_to_run,        # These are called each output step
+                    output_times=linspace(0.,20,50)) # The times to output
+        time_end= time.perf_counter()
+        cal_time = time_end-time_start
+        obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s)
+        obj.plot()
+        save_object(obj,Save_name)
+    elif Load == 1:
+        obj = load_object(Load_name)
+        pos,vel,ncells,L,s = obj.pos,obj.vel,obj.ncells,obj.L,obj.s
+        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+        obj.plot()
