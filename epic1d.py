@@ -29,6 +29,8 @@ except:
 def  damping(t,a,d):
     return a*np.exp(-d*t)
 
+def growth(t,a,b,c,d):
+    return a*np.tanh(b*t+c)+d
 
 def rk4step(f, y0, dt, args=()):
     """ Takes a single step using RK4 method """
@@ -279,13 +281,14 @@ def twostream(npart, L, vbeam=2):
 ####################################################################
 
 Load  = 1
-Save_name = "run.pickle"
-Load_name = "data/pn200000_cn100"
+Save_name = "data_TwoStream/pn50000_cn20.pickle"
+Load_name = "data_TwoStream/pn50000_cn20.pickle"
+Run_type = "TwoStream"
 
 import pickle
  
 class Run_Outcome():
-    def __init__(self,pos,vel,npart,ncells,cal_time,L,s,noise_level=0,frequency=0,frequency_error=0,damping_rate=0,damping_rate_error=0):
+    def __init__(self,pos,vel,npart,ncells,cal_time,L,s,noise_level=0,frequency=0,frequency_error=0,damping_rate=0,damping_rate_error=0,run_type = "Unknown"):
         self.pos = pos
         self.vel = vel
         self.npart = npart
@@ -298,116 +301,151 @@ class Run_Outcome():
         self.frequency_error = frequency_error
         self.damping_rate = damping_rate
         self.damping_error = damping_rate_error
+        self.run_type = run_type
 
 
     def calculate_values(self):
-        extrema = scipy.signal.argrelextrema(np.array(self.s.firstharmonic),np.greater)[0]
-        extrema_t = [self.s.t[0]]
-        extrema_harm = [self.s.firstharmonic[0]]
-        first_largest = -1
-        sign = -1
-        for n in extrema:
-            extrema_t.append(self.s.t[n])
-            extrema_harm.append(self.s.firstharmonic[n])
-        for n in range (1,len(extrema_harm)-1):
-                if extrema_harm[n]>extrema_harm[n-1]:
-                    first_largest = extrema[n]
-                    sign = n
-                    break
-        extrema_harm = np.array(extrema_harm)
-        extrema_t = np.array(extrema_t)
-        sig  = np.array(self.s.firstharmonic[0:first_largest])
-        sig_time = np.array(self.s.t[0:first_largest])
-        noise = np.array(self.s.firstharmonic[first_largest:-1])
-        noise_time = np.array(self.s.t[first_largest:-1])
-        noise_average_sqaure = np.mean(noise**2)
-        sig_average_sqaure = np.mean(sig**2)
+        if self.run_type == "Landau":
+            extrema = scipy.signal.argrelextrema(np.array(self.s.firstharmonic),np.greater)[0]
+            extrema_t = [self.s.t[0]]
+            extrema_harm = [self.s.firstharmonic[0]]
+            first_largest = -1
+            sign = -1
+            for n in extrema:
+                extrema_t.append(self.s.t[n])
+                extrema_harm.append(self.s.firstharmonic[n])
+            for n in range (1,len(extrema_harm)-1):
+                    if extrema_harm[n]>extrema_harm[n-1]:
+                        first_largest = extrema[n]
+                        sign = n
+                        break
+            extrema_harm = np.array(extrema_harm)
+            extrema_t = np.array(extrema_t)
+            sig  = np.array(self.s.firstharmonic[0:first_largest])
+            sig_time = np.array(self.s.t[0:first_largest])
+            noise = np.array(self.s.firstharmonic[first_largest:-1])
+            noise_time = np.array(self.s.t[first_largest:-1])
+            noise_average_sqaure = np.mean(noise**2)
+            sig_average_sqaure = np.mean(sig**2)
 
 
-        if noise_average_sqaure>0:
-            self.noise_level = sig_average_sqaure/noise_average_sqaure
+            if noise_average_sqaure>0:
+                self.noise_level = sig_average_sqaure/noise_average_sqaure
 
-        sig_peaks = extrema_harm[0:sign]
-        sig_t = extrema_t[0:sign]
+            sig_peaks = extrema_harm[0:sign]
+            sig_t = extrema_t[0:sign]
 
-        #calculating spacing between peaks
-        ave = []
-        for n in range (1,len(extrema_t)):
-            ave.append(extrema_t[n]-extrema_t[n-1])
-        period = (np.mean(ave)*2)
-        period_error = np.std(ave)*2
-        self.frequency  = 1/(np.mean(ave)*2)
-        self.frequency_error = period_error*period**(-2)
-        print(sig_t)
-        print(sig_peaks)
-        print(len(sig_t))
-        if len(sig_t)>1:
-            popt,pcov = curve_fit(damping,sig_t,sig_peaks)
-            self.damping_rate = popt[1]
-            print(self.damping_rate)
-            self.damping_error = np.sqrt(pcov[1][1])
-            print(self.damping_error)
-            print("damp")
+            #calculating spacing between peaks
+            ave = []
+            for n in range (1,len(extrema_t)):
+                ave.append(extrema_t[n]-extrema_t[n-1])
+            period = (np.mean(ave)*2)
+            period_error = np.std(ave)*2
+            self.frequency  = 1/(np.mean(ave)*2)
+            self.frequency_error = period_error*period**(-2)
+            print(sig_t)
+            print(sig_peaks)
+            print(len(sig_t))
+            if len(sig_t)>1:
+                popt,pcov = curve_fit(damping,sig_t,sig_peaks)
+                self.damping_rate = popt[1]
+                print(self.damping_rate)
+                self.damping_error = np.sqrt(pcov[1][1])
+                print(self.damping_error)
+                print("damp")
+        elif self.run_type == "TwoStream":
+            print("this is a two stream")
 
     def plot(self):
-        extrema = scipy.signal.argrelextrema(np.array(self.s.firstharmonic),np.greater)[0]
-        extrema = np.insert(extrema,0,0)
-        extrema_t = []
-        extrema_harm = []
-        first_largest = -1
-        sign = -1
-        for n in extrema:
-            extrema_t.append(self.s.t[n])
-            extrema_harm.append(self.s.firstharmonic[n])
-        for n in range (1,len(extrema_harm)-1):
-                if extrema_harm[n]>extrema_harm[n-1]:
-                    first_largest = extrema[n]
-                    sign = n
-                    break
-        extrema_harm = np.array(extrema_harm)
-        extrema_t = np.array(extrema_t)
-        noise_peaks = extrema_harm[sign:]
-        noise_peak_t = extrema_t[sign:]
-        sig  = np.array(self.s.firstharmonic[:first_largest])
-        sig_time = np.array(self.s.t[:first_largest])
-        noise = np.array(self.s.firstharmonic[first_largest:])
-        noise_time = np.array(self.s.t[first_largest:])
-        noise_average_sqaure = np.mean(noise**2)
-        sig_average_sqaure = np.mean(sig**2)
+        print(self.run_type)
+        print(self.run_type == "TwoStream")
+        if self.run_type == "Landau":
+            extrema = scipy.signal.argrelextrema(np.array(self.s.firstharmonic),np.greater)[0]
+            extrema = np.insert(extrema,0,0)
+            extrema_t = []
+            extrema_harm = []
+            first_largest = -1
+            sign = -1
+            for n in extrema:
+                extrema_t.append(self.s.t[n])
+                extrema_harm.append(self.s.firstharmonic[n])
+            for n in range (1,len(extrema_harm)-1):
+                    if extrema_harm[n]>extrema_harm[n-1]:
+                        first_largest = extrema[n]
+                        sign = n
+                        break
+            extrema_harm = np.array(extrema_harm)
+            extrema_t = np.array(extrema_t)
+            noise_peaks = extrema_harm[sign:]
+            noise_peak_t = extrema_t[sign:]
+            sig  = np.array(self.s.firstharmonic[:first_largest])
+            sig_time = np.array(self.s.t[:first_largest])
+            noise = np.array(self.s.firstharmonic[first_largest:])
+            noise_time = np.array(self.s.t[first_largest:])
+            noise_average_sqaure = np.mean(noise**2)
+            sig_average_sqaure = np.mean(sig**2)
 
 
-        if noise_average_sqaure>0:
-            self.noise_level = sig_average_sqaure/noise_average_sqaure
-        sig_peaks = extrema_harm[:sign]
-        sig_t = extrema_t[:sign]
-        #calculating spacing between peaks
-        ave = []
-        for n in range (1,len(extrema_t)):
-            ave.append(extrema_t[n]-extrema_t[n-1])
-        period = (np.mean(ave)*2)
-        period_error = np.std(ave)*2
-        self.frequency  = 1/(np.mean(ave)*2)
-        self.frequency_error = period_error*period**(-2)
-        print("frequency = {}".format(self.frequency))
-        print("frequency_error = {}".format(self.frequency_error))
-        print("noise level = {}".format(self.noise_level))
-        #print(self.damping_error)
-        if len(sig_t)>1:
-            popt,pcov = curve_fit(damping,sig_t,sig_peaks)
-            self.damping_rate = popt[1]
-        print(self.damping_rate)
-        plt.figure()
-        plt.plot(sig_time,sig)
-        plt.plot(noise_time,noise)
-        plt.scatter(sig_t, sig_peaks,marker="x")
-        #plt.scatter(extrema_t, extrema_harm)
-        plt.scatter(noise_peak_t,noise_peaks)
-        plt.plot(sig_t,damping(sig_t,*popt))
-        plt.xlabel("Time [Normalised]")
-        plt.ylabel("First harmonic amplitude [Normalised]")
-        plt.yscale('log')
-        plt.ioff() # This so that the windows stay open
-        plt.show()
+            if noise_average_sqaure>0:
+                self.noise_level = sig_average_sqaure/noise_average_sqaure
+            sig_peaks = extrema_harm[:sign]
+            sig_t = extrema_t[:sign]
+            #calculating spacing between peaks
+            ave = []
+            for n in range (1,len(extrema_t)):
+                ave.append(extrema_t[n]-extrema_t[n-1])
+            period = (np.mean(ave)*2)
+            period_error = np.std(ave)*2
+            self.frequency  = 1/(np.mean(ave)*2)
+            self.frequency_error = period_error*period**(-2)
+            print("frequency = {}".format(self.frequency))
+            print("frequency_error = {}".format(self.frequency_error))
+            print("noise level = {}".format(self.noise_level))
+            #print(self.damping_error)
+            if len(sig_t)>1:
+                popt,pcov = curve_fit(damping,sig_t,sig_peaks)
+                self.damping_rate = popt[1]
+            print(self.damping_rate)
+            plt.figure()
+            plt.plot(sig_time,sig)
+            plt.plot(noise_time,noise)
+            plt.scatter(sig_t, sig_peaks,marker="x")
+            #plt.scatter(extrema_t, extrema_harm)
+            plt.scatter(noise_peak_t,noise_peaks)
+            plt.plot(sig_t,damping(sig_t,*popt))
+            plt.xlabel("Time [Normalised]")
+            plt.ylabel("First harmonic amplitude [Normalised]")
+            plt.yscale('log')
+            plt.ioff() # This so that the windows stay open
+            plt.show()
+        elif self.run_type == "TwoStream":
+            print("making plot")
+            extrema = scipy.signal.argrelextrema(np.array(self.s.firstharmonic),np.greater)[0]
+            extrema = np.insert(extrema,0,0)
+            extrema_t = []
+            extrema_harm = []
+            first_largest = -1
+            sign = -1
+            for n in extrema:
+                extrema_t.append(self.s.t[n])
+                extrema_harm.append(self.s.firstharmonic[n])
+            for n in range (1,len(extrema_harm)-1):
+                    if extrema_harm[n]>extrema_harm[n-1]:
+                        first_largest = extrema[n]
+                        sign = n
+                        break
+            extrema_harm = np.array(extrema_harm)
+            extrema_t = np.array(extrema_t)
+            popt,pcov = curve_fit(growth,self.s.t,self.s.firstharmonic)
+            plt.figure()
+            plt.plot(self.s.t,self.s.firstharmonic)
+            plt.scatter(extrema_t,extrema_harm)
+            plt.plot(self.s.t,growth(self.s.t,*popt))
+            plt.xlabel("Time [Normalised]")
+            plt.ylabel("First harmonic amplitude [Normalised]")
+            plt.yscale('log')
+            plt.ioff() # This so that the windows stay open
+            plt.show()
             
     
  
@@ -440,14 +478,15 @@ def run_list():
         for ncells in cell_numbers:
             print(npart)
             print(ncells)
-            if False:
+            if Run_type == "TwoStream":
                 # 2-stream instability
                 L = 100
                 ncells = 20
                 pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
-            else:
+            elif Run_type == "Landau":
                 # Landau damping
                 L = 4.*pi
+                ncells = 20
                 pos, vel = landau(npart, L)
 
             s = Summary()                 # Calculates, stores and prints summary info
@@ -463,7 +502,7 @@ def run_list():
             print("completed run, npart = {},ncells = {}, time taken = {}".format(npart,ncells,cal_time))
             obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s)
             Save_name = "pn{}_cn{}".format(npart,ncells)
-            save_object(obj,"data/"+Save_name)
+            save_object(obj,"data_{}/{}".format(Run_type,Save_name))
 
 def Compare_runs():
     particle_numbers_loc = [5000,10000,20000,50000,100000,200000]
@@ -472,7 +511,7 @@ def Compare_runs():
     for npart in particle_numbers_loc:
         for ncells in cell_numbers_loc:
             Load_name = "pn{}_cn{}".format(npart,ncells)
-            run_objs.append(load_object("data/"+Load_name))
+            run_objs.append(load_object("data_{}/{}".format(Run_type,Save_name)))
     for obj in run_objs:
         obj.calculate_values()
     #plots at constant cell_number
@@ -620,18 +659,17 @@ def Compare_runs():
     
     
 
-
 if __name__ == "__main__":
     # Compare_runs()
     if Load == 0:
         # Generate initial condition
-        npart = 9000   
-        if False:
+        npart = 50000   
+        if Run_type == "TwoStream":
             # 2-stream instability
             L = 100
-            ncells = 20
+            ncells = 50
             pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
-        else:
+        elif Run_type == "Landau":
             # Landau damping
             L = 4.*pi
             ncells = 20
@@ -640,19 +678,19 @@ if __name__ == "__main__":
         p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
         s = Summary()                 # Calculates, stores and prints summary info
 
-        diagnostics_to_run = [p, s]   # Remove p to get much faster code!
+        diagnostics_to_run = [s]   # Remove p to get much faster code!
         
 
         # Run the simulation
         time_start = time.perf_counter()
         pos, vel = run(pos, vel, L, ncells, 
                     out = diagnostics_to_run,        # These are called each output step
-                    output_times=linspace(0.,20,50)) # The times to output
+                    output_times=linspace(0.,80,200)) # The times to output
         time_end= time.perf_counter()
         cal_time = time_end-time_start
-        obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s)
-        obj.plot()
+        obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s,run_type=Run_type)
         save_object(obj,Save_name)
+        obj.plot()
     elif Load == 1:
         obj = load_object(Load_name)
         pos,vel,ncells,L,s = obj.pos,obj.vel,obj.ncells,obj.L,obj.s
