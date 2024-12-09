@@ -357,7 +357,27 @@ class Run_Outcome():
                 print(self.damping_error)
                 print("damp")
         elif self.run_type == "TwoStream":
-            print("this is a two stream")
+            extrema = scipy.signal.argrelextrema(np.array(self.s.firstharmonic),np.greater)[0]
+            extrema = np.insert(extrema,0,0)
+            extrema_t = []
+            extrema_harm = []
+            first_largest = -1
+            sign = -1
+            for n in extrema:
+                extrema_t.append(self.s.t[n])
+                extrema_harm.append(self.s.firstharmonic[n])
+            extrema_harm = np.array(extrema_harm)
+            extrema_t = np.array(extrema_t)
+            # splitting growth data from saturation data
+            largest_index = np.argmax(extrema_harm)
+            growth_data = extrema_harm[:largest_index]
+            growth_t = extrema_t[:largest_index]
+
+            if len(growth_t,)>1:
+                popt,pcov = curve_fit(growth,growth_t,growth_data,bounds=([0.,0.,-80.,0.], [1,1,0,1]))
+                perr = np.sqrt(np.diag(pcov))
+                self.growth_rate = popt[0]*popt[1]
+                self.growth_error = perr[0]*perr[1]
 
     def plot(self):
         print(self.run_type)
@@ -513,10 +533,33 @@ def run_list():
                 time_end= time.perf_counter()
                 cal_time = time_end-time_start
                 print("completed run, npart = {},ncells = {}, time taken = {}".format(npart,ncells,cal_time))
-                obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s)
+                obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s,run_type=Run_type)
                 Save_name = "pn{}_cn{}_{}".format(npart,ncells,Run)
                 save_object(obj,"data_{}/{}".format(Run_type,Save_name))
 
+def Compare_runs_TwoStream():
+    particle_numbers_loc = [50000]
+    cell_numbers_loc = [20]
+    Run_Number_loc = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+    run_objs = []
+    for npart in particle_numbers_loc:
+        for ncells in cell_numbers_loc:
+            for run in Run_Number_loc:
+                Load_name = "pn{}_cn{}_{}".format(npart,ncells,run)
+                run_objs.append(load_object("data_{}/{}".format(Run_type,Load_name)))
+    growth_rates = []
+    growth_rate_errors = []
+    for obj in run_objs:
+        print(obj)
+        obj.calculate_values()
+        growth_rates.append(obj.growth_rate)
+        growth_rate_errors.append(obj.growth_error)
+        obj.plot()
+    print(growth_rates)
+    print(growth_rate_errors)
+    print("growth rate average: {}".format(np.average(growth_rates)))
+
+    
 def Compare_runs():
     particle_numbers_loc = [5000,10000,20000,50000,100000,200000]
     cell_numbers_loc = [30,40,50,60,70,80,90,100]
@@ -673,7 +716,7 @@ def Compare_runs():
     
 
 if __name__ == "__main__":
-    run_list()
+    Compare_runs_TwoStream()
     # if Load == 0:
     #     # Generate initial condition
     #     npart = 50000   
