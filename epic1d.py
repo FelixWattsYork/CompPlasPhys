@@ -42,6 +42,24 @@ def rk4step(f, y0, dt, args=()):
 
     return y0 + (k1 + 2.*k2 + 2.*k3 + k4)*dt / 6.
 
+def calc_density_vec(position, ncells, L):
+
+    nparticles = len(position)
+
+    # Convert positions to cell indices
+    p = (position*ncells) / L
+    plower = np.floor(p).astype(int)  # Lower cell index (round down)
+    offset = p - plower  # Fractional part (offset from the lower cell)
+
+    # Distribute densities
+    density = np.zeros(ncells, dtype=float)
+    np.add.at(density, plower % ncells, 1.0 - offset)  # Add to the lower cell
+    np.add.at(density, (plower + 1) % ncells, offset)  # Add to the upper cell
+
+    # Normalize the density
+    density *= float(ncells) / float(nparticles)
+    return density
+
 def calc_density(position, ncells, L):
     """ Calculate charge density given particle positions
     
@@ -126,7 +144,7 @@ def pic(f, ncells, L):
     pos = ((pos % L) + L) % L
     
     # Calculate number density, normalised so 1 when uniform
-    density = calc_density(pos, ncells, L)
+    density = calc_density_vec(pos, ncells, L)
     
     # Subtract ion density to get total charge density
     rho = density - 1.
@@ -187,7 +205,7 @@ class Plot:
     """
     def __init__(self, pos, vel, ncells, L):
         
-        d = calc_density(pos, ncells, L)
+        d = calc_density_vec(pos, ncells, L)
         vhist, bins  = histogram(vel, int(sqrt(len(vel))))
         vbins = 0.5*(bins[1:]+bins[:-1])
         
@@ -217,7 +235,7 @@ class Plot:
         plt.show()
         
     def __call__(self, pos, vel, ncells, L, t):
-        d = calc_density(pos, ncells, L)
+        d = calc_density_vec(pos, ncells, L)
         vhist, bins  = histogram(vel, int(sqrt(len(vel))))
         vbins = 0.5*(bins[1:]+bins[:-1])
         
@@ -235,7 +253,7 @@ class Summary:
         
     def __call__(self, pos, vel, ncells, L, t):
         # Calculate the charge density
-        d = calc_density(pos, ncells, L)
+        d = calc_density_vec(pos, ncells, L)
         
         # Amplitude of the first harmonic
         fh = 2.*abs(fft(d)[1]) / float(ncells)
@@ -444,13 +462,7 @@ class Run_Outcome():
         elif self.run_type == "TwoStream":
             print("making plot")
             extrema = scipy.signal.argrelextrema(np.array(self.s.firstharmonic),np.greater)[0]
-            extrema = np.insert(extrema,0,0)
-            extrema_t = []
-            extrema_harm = []
-            first_largest = -1
-            sign = -1
-            for n in extrema:
-                extrema_t.append(self.s.t[n])
+            extrema = np.insert(extrema,0,0) easy
                 extrema_harm.append(self.s.firstharmonic[n])
             extrema_harm = np.array(extrema_harm)
             extrema_t = np.array(extrema_t)
@@ -499,7 +511,7 @@ def load_object(filename):
 
 
 
-particle_numbers = [50000]
+particle_numbers = [500]
 cell_numbers = [20]
 Run_Number = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
 
@@ -716,39 +728,40 @@ def Compare_runs():
     
 
 if __name__ == "__main__":
-    Compare_runs_TwoStream()
-    # if Load == 0:
-    #     # Generate initial condition
-    #     npart = 50000   
-    #     if Run_type == "TwoStream":
-    #         # 2-stream instability
-    #         L = 100
-    #         ncells = 50
-    #         pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
-    #     elif Run_type == "Landau":
-    #         # Landau damping
-    #         L = 4.*pi
-    #         ncells = 20
-    #         pos, vel = landau(npart, L)
-    #     # Create some output classes
-    #     p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
-    #     s = Summary()                 # Calculates, stores and prints summary info
+    #Compare_runs_TwoStream()
+    if Load == 0:
+        # Generate initial condition
+        npart = 50000   
+        if Run_type == "TwoStream":
+            # 2-stream instability
+            L = 100
+            ncells = 50
+            pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
+        elif Run_type == "Landau":
+            # Landau damping
+            L = 4.*pi
+            ncells = 20
+            pos, vel = landau(npart, L)
+        # Create some output classes
+        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+        s = Summary()                 # Calculates, stores and prints summary info
 
-    #     diagnostics_to_run = [s]   # Remove p to get much faster code!
+        diagnostics_to_run = [p,s]   # Remove p to get much faster code!
         
 
-    #     # Run the simulation
-    #     time_start = time.perf_counter()
-    #     pos, vel = run(pos, vel, L, ncells, 
-    #                 out = diagnostics_to_run,        # These are called each output step
-    #                 output_times=linspace(0.,80,200)) # The times to output
-    #     time_end= time.perf_counter()
-    #     cal_time = time_end-time_start
-    #     obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s,run_type=Run_type)
-    #     save_object(obj,Save_name)
-    #     obj.plot()
-    # elif Load == 1:
-    #     obj = load_object(Load_name)
-    #     pos,vel,ncells,L,s = obj.pos,obj.vel,obj.ncells,obj.L,obj.s
-    #     p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
-    #     obj.plot()
+        # Run the simulation
+        time_start = time.perf_counter()
+        pos, vel = run(pos, vel, L, ncells, 
+                    out = diagnostics_to_run,        # These are called each output step
+                    output_times=linspace(0.,80,200)) # The times to output
+        time_end= time.perf_counter()
+        cal_time = time_end-time_start
+        obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s,run_type=Run_type)
+        print(cal_time)
+        save_object(obj,Save_name)
+        obj.plot()
+    elif Load == 1:
+        obj = load_object(Load_name)
+        pos,vel,ncells,L,s = obj.pos,obj.vel,obj.ncells,obj.L,obj.s
+        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+        obj.plot()
