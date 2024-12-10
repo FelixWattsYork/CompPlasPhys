@@ -13,6 +13,7 @@ import time
 from joblib import Parallel, delayed
 from itertools import product
 import joblib
+from scipy.stats import gaussian_kde
 
 import matplotlib.pyplot as plt # Matplotlib plotting library
 
@@ -489,19 +490,19 @@ class Run_Outcome():
                 perr = np.sqrt(np.diag(pcov2))
                 self.growth_rate = popt2[0]*popt2[1]
                 self.growth_error = perr[0]*perr[1]
-                plt.figure()
-                plt.plot(self.s.t,self.s.firstharmonic)
-                plt.scatter(extrema_t,extrema_harm)
-                print(*popt)
-                plt.plot(extrema_t,growth(np.array(extrema_t),*popt2))
-                plt.plot(growth_t,self.growth_rate*(growth_t+popt2[2])+popt2[3])
-                plt.xlabel("Time [Normalised]")
-                plt.ylabel("First harmonic amplitude [Normalised]")
-                plt.ylim(0,max(extrema_harm)*1.1)
-                print("growth rate: {}".format(self.growth_rate))
-                print("growth rate error: {}".format(self.growth_error))
+                # plt.figure()
+                # plt.plot(self.s.t,self.s.firstharmonic)
+                # plt.scatter(extrema_t,extrema_harm)
+                # print(*popt)
+                # plt.plot(extrema_t,growth(np.array(extrema_t),*popt2))
+                # plt.plot(growth_t,self.growth_rate*(growth_t+popt2[2])+popt2[3])
+                # plt.xlabel("Time [Normalised]")
+                # plt.ylabel("First harmonic amplitude [Normalised]")
+                # plt.ylim(0,max(extrema_harm)*1.1)
+                # print("growth rate: {}".format(self.growth_rate))s
+                # print("growth rate error: {}".format(self.growth_error))
                 #plt.yscale()
-                plt.ioff() # This so that the windows stay open
+                #plt.ioff() # This so that the windows stay open
                 #plt.show()
             except:
                 print("cannot fit data")
@@ -574,7 +575,7 @@ def run_list():
 def Compare_runs_TwoStream():
     particle_numbers_loc = [50000]
     cell_numbers_loc = [30]
-    Run_Number_loc = list(range(1, 51))
+    Run_Number_loc = list(range(1, 101))
     run_objs = []
     for npart in particle_numbers_loc:
         for ncells in cell_numbers_loc:
@@ -592,6 +593,21 @@ def Compare_runs_TwoStream():
     print(growth_rates)
     print(growth_rate_errors)
     print("growth rate average: {}".format(np.median(growth_rates)))
+    # Estimate density
+    growth_rates= [num for num in growth_rates if num <= 0.001]
+    density = gaussian_kde(growth_rates)
+    x = np.linspace(min(growth_rates), max(growth_rates), 1000)  # Points to evaluate the density
+    y = density(x)
+
+    # Plot the density
+    plt.plot(x, y, label="Density")
+    plt.fill_between(x, y, alpha=0.3)  # Optional: fill under the curve
+    plt.xlabel("Value")
+    #plt.xlim(0,0.001)
+    plt.ylabel("Density")
+    plt.title("Distribution Density Function")
+    plt.legend()
+    plt.show()
 
     
 def Compare_runs():
@@ -750,8 +766,8 @@ def Compare_runs():
     
 
 if __name__ == "__main__":
-    run_list()
-    #Compare_runs_TwoStream()
+    #run_list()
+    Compare_runs_TwoStream()
     # if Load == 0:
     #     # Generate initial condition
     #     npart = 50000   
