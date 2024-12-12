@@ -557,6 +557,7 @@ print(particle_numbers)
 
 def run_run(data):
     npart,ncells,Run = data[0],data[1],data[2]
+    random.seed(Run)
     if Run_type == "TwoStream":
         # 2-stream instability
         L = 100
