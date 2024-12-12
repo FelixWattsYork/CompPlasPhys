@@ -326,8 +326,8 @@ def twostream(npart, L, vbeam=2):
 
 Load  = 1
 Save_name = "damping.pickle"
-Load_name = "damping.pickle"
-Run_type = "Landau"
+Load_name = "data_Landau/pn20000_cn20_4_L_15"
+Run_type = "TwoStream"
 
 import pickle
  
@@ -614,7 +614,7 @@ def Compare_runs_TwoStream():
     for npart in particle_numbers_loc:
         for ncells in cell_numbers_loc:
             for run in Run_Number_loc:
-                Load_name = "pn{}_cn{}_{}_L_{}".format(npart,ncells,run,run_L_loc[1])
+                Load_name = "pn{}_cn{}_{}".format(npart,ncells,run)
                 run_objs.append(load_object("data_{}/{}".format(Run_type,Load_name)))
     growth_rates = []
     growth_rate_errors = []
@@ -628,15 +628,29 @@ def Compare_runs_TwoStream():
     print(growth_rate_errors)
     print("growth rate average: {}".format(np.median(growth_rates)))
     # Estimate density
+    #growth_rates= [num for num in growth_rates if num <= 0.001]
     growth_rates= [num for num in growth_rates if num <= 0.001]
     density = gaussian_kde(growth_rates)
+    print("density covaraince {}".format(density.covariance))
+    print()
     x = np.linspace(min(growth_rates), max(growth_rates), 1000)  # Points to evaluate the density
     y = density(x)
+
+    x_grid = np.linspace(0, 0.001, 1000)
+
+    # Evaluate the KDE on the grid
+    kde_values = density(x_grid)
+
+    # Find the peak (maximum value)
+    peak_index = np.argmax(kde_values)  # Index of the peak
+    peak_value = x_grid[peak_index]    # Location of the peak
+    kde_peak = kde_values[peak_index]  # KDE value at the peak
+    print(peak_value)
 
     # Plot the density
     plt.plot(x, y, label="Density")
     plt.fill_between(x, y, alpha=0.3)  # Optional: fill under the curve
-    plt.xlabel("Value")
+    plt.xlabel("Instability Growth Rate")
     #plt.xlim(0,0.001)
     plt.ylabel("Density")
     plt.title("Distribution Density Function")
@@ -974,9 +988,10 @@ def Compare_runs():
     
 
 if __name__ == "__main__":
+    Compare_runs_TwoStream()
     #run_list()
     #Compare_runs()
-    Compare_Box_lengths()
+    #Compare_Box_lengths()
     # if Load == 0:
     #     random.seed(0)
     #     # Generate initial condition
