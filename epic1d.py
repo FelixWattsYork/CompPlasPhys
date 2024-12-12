@@ -588,7 +588,7 @@ def run_list():
     run_data = [list(comb) for comb in product(particle_numbers , cell_numbers , Run_Number)]
     #for data in run_data:
      #    run_run(data)
-    Parallel(n_jobs=4, backend='threading')(delayed(run_run)(data) for data in run_data)
+    Parallel(n_jobs=-1, backend='threading')(delayed(run_run)(data) for data in run_data)
                 
 
 
