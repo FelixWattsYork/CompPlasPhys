@@ -324,9 +324,9 @@ def twostream(npart, L, vbeam=2):
 
 ####################################################################
 
-Load  = 0
-Save_name = "data_TwoStream/pn50000_cn20_2.pickle"
-Load_name = "data_TwoStream/pn50000_cn20.pickle"
+Load  = 1
+Save_name = "damping.pickle"
+Load_name = "damping.pickle"
 Run_type = "Landau"
 
 import pickle
@@ -449,9 +449,11 @@ class Run_Outcome():
             noise_peak_t = extrema_t[sign:]
             sig  = np.array(self.s.firstharmonic[:first_largest])
             sig_time = np.array(self.s.t[:first_largest])
+            # currently I'm taking the mean of the noise peaks, however since this makes the noise level dependent on the time length I think this is only reasonable on 
+            # integration methods that don't change kinetic energy, however since RK4 does this I'm going to make the noise level the amplitude of the first peak only 
             noise = np.array(self.s.firstharmonic[first_largest:])
             noise_time = np.array(self.s.t[first_largest:])
-            noise_average_sqaure = np.mean(noise**2)
+            noise_average_sqaure = np.mean(noise[0]**2)
             sig_average_sqaure = np.mean(sig**2)
 
 
@@ -478,12 +480,17 @@ class Run_Outcome():
             plt.figure()
             plt.plot(sig_time,sig)
             plt.plot(noise_time,noise)
+            plt.axvline(x=noise_time[0], linestyle='dotted',color = "r",label = "Noise Dominated Region")
+            plt.axhline(y=noise[0], linestyle='dotted', color = "orange",label = "Noise Level")
+            plt.axhline(y=np.sqrt(sig_average_sqaure), linestyle='dotted', color = "blue",label = "Signal Level")
             plt.scatter(sig_t, sig_peaks,marker="x")
             #plt.scatter(extrema_t, extrema_harm)
             plt.scatter(noise_peak_t,noise_peaks)
-            plt.plot(sig_t,damping(sig_t,*popt))
+            plt.plot(sig_t,damping(sig_t,*popt),label = "Wave Damping")
+            plt.title("Plot of Harmonic Amplotude showing Damping of Landau wave")
             plt.xlabel("Time [Normalised]")
             plt.ylabel("First harmonic amplitude [Normalised]")
+            plt.legend()
             plt.yscale('log')
             plt.ioff() # This so that the windows stay open
             plt.show()
@@ -549,43 +556,42 @@ def load_object(filename):
 
 
 
-particle_numbers = [50000]
-cell_numbers = [30]
-Run_Number = list(range(51, 101))
+particle_numbers = [20000]
+cell_numbers = list(range(10, 110,10))
+Run_Number = list(range(0, 6))
+run_L = [4.*pi]
 
 print(particle_numbers)
 
 def run_run(data):
-    npart,ncells,Run = data[0],data[1],data[2]
+    npart,ncells,Run,L_loc = data[0],data[1],data[2],data[3]
     random.seed(Run)
     if Run_type == "TwoStream":
         # 2-stream instability
-        L = 100
-        pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
+        pos, vel = twostream(npart, L_loc, 3.) # Might require more npart than Landau!
         times_scale=linspace(0.,80,200)
     elif Run_type == "Landau":
         # Landau damping
-        L = 4.*pi
-        pos, vel = landau(npart, L)
-        times_scale=linspace(0.,20,50)
+        pos, vel = landau(npart, L_loc)
+        times_scale=linspace(0.,40,100)
 
     s = Summary()                 # Calculates, stores and prints summary info
 
     diagnostics_to_run = [s]   # Remove p to get much faster code!
     # Run the simulation
     time_start = time.perf_counter()
-    pos, vel = run(pos, vel, L, ncells, 
+    pos, vel = run(pos, vel, L_loc, ncells, 
                 out = diagnostics_to_run,        # These are called each output step
                 output_times = times_scale) # The times to output
     time_end= time.perf_counter()
     cal_time = time_end-time_start
     print("completed run, npart = {},ncells = {}, time taken = {}".format(npart,ncells,cal_time))
-    obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s,run_type=Run_type)
-    Save_name = "pn{}_cn{}_{}".format(npart,ncells,Run)
+    obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L_loc,s,run_type=Run_type)
+    Save_name = "pn{}_cn{}_{}_L_{}".format(npart,ncells,Run,L_loc)
     save_object(obj,"data_{}/{}".format(Run_type,Save_name))
 
 def run_list():
-    run_data = [list(comb) for comb in product(particle_numbers , cell_numbers , Run_Number)]
+    run_data = [list(comb) for comb in product(particle_numbers , cell_numbers , Run_Number,run_L)]
     #for data in run_data:
      #    run_run(data)
     Parallel(n_jobs=-1, backend='threading')(delayed(run_run)(data) for data in run_data)
@@ -788,41 +794,42 @@ def Compare_runs():
     
 
 if __name__ == "__main__":
-    #run_list()
+    run_list()
     #Compare_runs_TwoStream()
-    if Load == 0:
-        # Generate initial condition
-        npart = 50000
-        if Run_type == "TwoStream":
-            # 2-stream instability
-            L = 100
-            ncells = 50
-            pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
-        elif Run_type == "Landau":
-            # Landau damping
-            L = 4.*pi
-            ncells = 20
-            pos, vel = landau(npart, L)
-        # Create some output classes
-        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
-        s = Summary()                 # Calculates, stores and prints summary info
+    # if Load == 0:
+    #     random.seed(0)
+    #     # Generate initial condition
+    #     npart = 1000000
+    #     if Run_type == "TwoStream":
+    #         # 2-stream instability
+    #         L = 100
+    #         ncells = 50
+    #         pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
+    #     elif Run_type == "Landau":
+    #         # Landau damping
+    #         L = 4.*pi
+    #         ncells = 100
+    #         pos, vel = landau(npart, L)
+    #     # Create some output classes
+    #     p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+    #     s = Summary()                 # Calculates, stores and prints summary info
 
-        diagnostics_to_run = [s]   # Remove p to get much faster code!
+    #     diagnostics_to_run = [s]   # Remove p to get much faster code!
         
 
-        # Run the simulation
-        time_start = time.perf_counter()
-        pos, vel = run(pos, vel, L, ncells, 
-                    out = diagnostics_to_run,        # These are called each output step
-                    output_times=linspace(0.,80,200)) # The times to output
-        time_end= time.perf_counter()
-        cal_time = time_end-time_start
-        obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s,run_type=Run_type)
-        print("cal_time{}".format(cal_time))
-        save_object(obj,Save_name)
-        obj.plot()
-    elif Load == 1:
-        obj = load_object(Load_name)
-        pos,vel,ncells,L,s = obj.pos,obj.vel,obj.ncells,obj.L,obj.s
-        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
-        obj.plot()
+    #     # Run the simulation
+    #     time_start = time.perf_counter()
+    #     pos, vel = run(pos, vel, L, ncells, 
+    #                 out = diagnostics_to_run,        # These are called each output step
+    #                 output_times=linspace(0.,80,200)) # The times to output
+    #     time_end= time.perf_counter()
+    #     cal_time = time_end-time_start
+    #     obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s,run_type=Run_type)
+    #     print("cal_time{}".format(cal_time))
+    #     save_object(obj,Save_name)
+    #     obj.plot()
+    # elif Load == 1:
+    #     obj = load_object(Load_name)
+    #     pos,vel,ncells,L,s = obj.pos,obj.vel,obj.ncells,obj.L,obj.s
+    #     p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+    #     obj.plot()
