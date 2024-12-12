@@ -555,6 +555,8 @@ def load_object(filename):
 
 
 
+def one_over_sqrt(x,a,b,c):
+    return a/np.sqrt(b*x) +c
 
 
 particle_numbers = [20000]
@@ -733,11 +735,23 @@ def Compare_runs():
     axs[0,1].set_ylim(0.18, 0.24)
 
     #Noise Level plots
-  
+    av = []
+    bv = []
+    cv = []
     for n in range (0,len(cell_numbers_loc)):
+        print(len(particle_number_2d[n]))
+        print(len(noise_levels_2d[n]))
+        popt,pcov = curve_fit(one_over_sqrt,particle_number_2d[n],np.array(noise_levels_2d[n]))
+        print(popt)
+        # axs[1,0].plot(particle_number_2d[n],one_over_sqrt(np.array(particle_number_2d[n]),popt[0],popt[1],popt[2]))
+        av.append(popt[0])
+        bv.append(popt[1])
+        cv.append(popt[2])
         axs[1,0].plot(particle_number_2d[n],noise_levels_2d[n])
+    axs[1,0].plot(particle_number_2d[-1],one_over_sqrt(np.array(particle_number_2d[-1]),np.mean(av),np.mean(bv),np.mean(cv)),color = "red",label="Inverse Square Fitting")
     axs[1,0].set_xlabel("Particle Number")
     axs[1,0].set_ylabel("Signal Strength")
+    axs[1,0].set_xscale("log")
    
     #damping rates plots
  
@@ -749,7 +763,7 @@ def Compare_runs():
     fig.suptitle("Plots at constant Cell Number", fontsize=16)
     lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    fig.legend(lines, labels, loc = (0.9, 0.8))
+    fig.legend(lines, labels, loc = (0.88, 0.7))
     plt.ioff() # This so that the windows stay open
 
 
@@ -820,10 +834,16 @@ def Compare_runs():
     axs[0,1].set_xlabel("Cell Number")
     axs[0,1].set_ylabel("Frequency (Hz)")
 
+
+
+
+    
     #Noise Level plots
-  
+    
     for n in range (0,len(particle_numbers_loc)):
         axs[1,0].plot(cell_number_2d[n],noise_levels_2d[n])
+
+
     #axs[1,0].legend()
     axs[1,0].set_xlabel("Cell Number")
     axs[1,0].set_ylabel("Signal Strength")
@@ -839,7 +859,7 @@ def Compare_runs():
     fig.suptitle("Plots at constant Particle Number", fontsize=16)
     lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
     lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
-    fig.legend(lines, labels, loc = (0.85, 0.85))
+    fig.legend(lines, labels, loc = (0.75, 0.75))
     plt.ioff() # This so that the windows stay open
     plt.show()
     
