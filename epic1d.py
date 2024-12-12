@@ -394,12 +394,15 @@ class Run_Outcome():
             #print(sig_peaks)
             #print(len(sig_t))
             if len(sig_t)>1:
-                popt,pcov = curve_fit(damping,sig_t,sig_peaks)
-                self.damping_rate = popt[1]
-                #print(self.damping_rate)
-                self.damping_error = np.sqrt(pcov[1][1])
-                #print(self.damping_error)
-                #print("damp")
+                try:
+                    popt,pcov = curve_fit(damping,sig_t,sig_peaks)
+                    self.damping_rate = popt[1]
+                    #print(self.damping_rate)
+                    self.damping_error = np.sqrt(pcov[1][1])
+                    #print(self.damping_error)
+                    #print("damp")
+                except:
+                    print("couldn't fit data")
         elif self.run_type == "TwoStream":
             extrema = scipy.signal.argrelextrema(np.array(self.s.firstharmonic),np.greater)[0]
             extrema = np.insert(extrema,0,0)
@@ -561,8 +564,8 @@ def one_over_sqrt(x,a,b,c):
 
 particle_numbers = [20000]
 cell_numbers = [20]
-Run_Number = list(range(0, 6))
-run_L = list(range(5,15,1))
+Run_Number = list(range(6, 11))
+run_L = list(range(5,25,1))
 
 
 def run_run(data):
@@ -640,6 +643,107 @@ def Compare_runs_TwoStream():
     plt.legend()
     plt.show()
 
+def Compare_Box_lengths():
+    npart = 20000
+    ncells= 20
+    Run_Number_loc = list(range(0, 11))
+    run_L_loc = list(range(5,25,1))
+    run_objs = []
+    for run in Run_Number_loc:
+        for L in run_L_loc:
+            Load_name = "pn{}_cn{}_{}_L_{}".format(npart,ncells,run,L)
+            run_objs.append(load_object("data_{}/{}".format(Run_type,Load_name)))
+            run_objs[-1].run_number = run
+    
+    for obj in run_objs:
+        obj.calculate_values()
+
+    times = []
+    particle_number = []
+    frequencies = []
+    frequency_errors = []
+    noise_levels = []
+    damping_rates = []
+    damping_rate_errors = []
+    for L in run_L_loc:
+        times_av = []
+        particle_number_av = []
+        frequencies_av = []
+        frequency_errors_av = []
+        noise_levels_av = []
+        damping_rates_av = []
+        damping_rate_errors_av = []
+        for run in Run_Number_loc:
+            for obj in run_objs:
+                # print("comparison")
+                # print(obj.ncells)
+                # print(ncells)
+                # print(obj.npart)
+                # print(particle_num)
+                # print(obj.run_number)
+                # print(run)
+                # print(obj.ncells == ncells and obj.npart == particle_num and obj.run_number == run)
+                # print(obj.ncells == ncells)
+                # print(obj.npart == particle_num)
+                # print(obj.run_number == run)
+                if obj.run_number == run and obj.L == L:
+                    print("true")
+                    print(L)
+                    times_av.append(obj.cal_time)
+                    #print(times_av)
+                    frequencies_av.append(obj.frequency)
+                    frequency_errors_av.append(obj.frequency_error)
+                    noise_levels_av.append(obj.noise_level)
+                    damping_rates_av.append(obj.damping_rate)
+                    damping_rate_errors_av.append(obj.damping_error)
+        times.append(np.mean(times_av))
+        #print(times_av)
+        #print(np.mean(times_av))
+        frequencies.append(np.mean(frequencies_av))
+        frequency_errors.append(np.mean(frequency_errors_av))
+        noise_levels.append(np.mean(noise_levels_av))
+        damping_rates.append(np.mean(damping_rates_av))
+        damping_rate_errors.append(np.mean(damping_rate_errors_av))
+
+    print(run_L)
+    #2time plots
+    fig, axs = plt.subplots(2,2)
+    axs[0,0]
+    axs[0,0].plot(run_L_loc,times)
+    axs[0,0].set_xlabel("Box Size")
+    axs[0,0].set_ylabel("Run Times (s)")
+
+    #frequencies plots
+
+    axs[0,1].plot(run_L_loc,frequencies)
+        #axs[0,1].fill_between(particle_number_2d[n],np.array(frequencies_2d[n])+np.array(frequency_errors_2d[n]),np.array(frequencies_2d[n])-np.array(frequency_errors_2d[n]),alpha=0.2)
+    axs[0,1].set_xlabel("Box Size")
+    axs[0,1].set_ylabel("Frequencies (Hz)")
+    axs[0,1].set_ylim(0.18, 0.24)
+
+    #Noise Level plots
+    axs[1,0].plot(run_L_loc,noise_levels)
+    axs[1,0].set_xlabel("Box Size")
+    axs[1,0].set_ylabel("Signal Strength")
+   
+    #damping rates plots
+ 
+    axs[1,1].plot(run_L_loc,damping_rates)
+        #axs[1,1].fill_between(particle_number_2d[n], np.array(damping_rates_2d[n])-np.array(damping_rates_errors_2d[n]), np.array(damping_rates_2d[n])+np.array(damping_rates_errors_2d[n]),alpha=0.2)
+    axs[1,1].set_xlabel("Box Size")
+    axs[1,1].set_ylabel("Damping Rate")
+    fig.suptitle("Plots of varying box size", fontsize=16)
+    lines_labels = [ax.get_legend_handles_labels() for ax in fig.axes]
+    lines, labels = [sum(lol, []) for lol in zip(*lines_labels)]
+    fig.legend(lines, labels, loc = (0.88, 0.7))
+    plt.ioff() # This so that the windows stay open
+
+    plt.show()
+
+
+
+
+    
     
 def Compare_runs():
     particle_numbers_loc = [1000,2000,5000,10000,20000,50000,100000,200000]
@@ -656,6 +760,10 @@ def Compare_runs():
                 run_objs[-1].run_number = run
     for obj in run_objs:
         obj.calculate_values()
+
+
+
+
     #plots at constant cell_number
     times_2d = []
     particle_number_2d = []
@@ -867,7 +975,8 @@ def Compare_runs():
 
 if __name__ == "__main__":
     #run_list()
-    Compare_runs()
+    #Compare_runs()
+    Compare_Box_lengths()
     # if Load == 0:
     #     random.seed(0)
     #     # Generate initial condition
