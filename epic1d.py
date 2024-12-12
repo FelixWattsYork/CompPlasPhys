@@ -332,7 +332,7 @@ Run_type = "Landau"
 import pickle
  
 class Run_Outcome():
-    def __init__(self,pos,vel,npart,ncells,cal_time,L,s,noise_level=0,frequency=0,frequency_error=0,damping_rate=0,damping_rate_error=0,run_type = "Unknown",growth_rate=0,growth_error=0):
+    def __init__(self,pos,vel,npart,ncells,cal_time,L,s,noise_level=0,frequency=0,frequency_error=0,damping_rate=0,damping_rate_error=0,run_type = "Unknown",growth_rate=0,growth_error=0,run_number = 0):
         self.pos = pos
         self.vel = vel
         self.npart = npart
@@ -348,6 +348,7 @@ class Run_Outcome():
         self.run_type = run_type
         self.growth_rate = growth_rate
         self.growth_error = growth_error
+        self.run_number = run_number
 
 
     def calculate_values(self):
@@ -389,16 +390,16 @@ class Run_Outcome():
             period_error = np.std(ave)*2
             self.frequency  = 1/(np.mean(ave)*2)
             self.frequency_error = period_error*period**(-2)
-            print(sig_t)
-            print(sig_peaks)
-            print(len(sig_t))
+            #print(sig_t)
+            #print(sig_peaks)
+            #print(len(sig_t))
             if len(sig_t)>1:
                 popt,pcov = curve_fit(damping,sig_t,sig_peaks)
                 self.damping_rate = popt[1]
-                print(self.damping_rate)
+                #print(self.damping_rate)
                 self.damping_error = np.sqrt(pcov[1][1])
-                print(self.damping_error)
-                print("damp")
+                #print(self.damping_error)
+                #print("damp")
         elif self.run_type == "TwoStream":
             extrema = scipy.signal.argrelextrema(np.array(self.s.firstharmonic),np.greater)[0]
             extrema = np.insert(extrema,0,0)
@@ -426,8 +427,8 @@ class Run_Outcome():
                     print("cannot fit data")
 
     def plot(self):
-        print(self.run_type)
-        print(self.run_type == "TwoStream")
+        #print(self.run_type)
+        #print(self.run_type == "TwoStream")
         if self.run_type == "Landau":
             extrema = scipy.signal.argrelextrema(np.array(self.s.firstharmonic),np.greater)[0]
             extrema = np.insert(extrema,0,0)
@@ -449,7 +450,7 @@ class Run_Outcome():
             noise_peak_t = extrema_t[sign:]
             sig  = np.array(self.s.firstharmonic[:first_largest])
             sig_time = np.array(self.s.t[:first_largest])
-            # currently I'm taking the mean of the noise peaks, however since this makes the noise level dependent on the time length I think this is only reasonable on 
+            # un_numnercurrently I'm taking the mean of the noise peaks, however since this makes the noise level dependent on the time length I think this is only reasonable on 
             # integration methods that don't change kinetic energy, however since RK4 does this I'm going to make the noise level the amplitude of the first peak only 
             noise = np.array(self.s.firstharmonic[first_largest:])
             noise_time = np.array(self.s.t[first_largest:])
@@ -557,11 +558,10 @@ def load_object(filename):
 
 
 particle_numbers = [20000]
-cell_numbers = list(range(10, 110,10))
+cell_numbers = [20]
 Run_Number = list(range(0, 6))
-run_L = [4.*pi]
+run_L = list(range(5,15,1))
 
-print(particle_numbers)
 
 def run_run(data):
     npart,ncells,Run,L_loc = data[0],data[1],data[2],data[3]
@@ -586,7 +586,7 @@ def run_run(data):
     time_end= time.perf_counter()
     cal_time = time_end-time_start
     print("completed run, npart = {},ncells = {}, time taken = {}".format(npart,ncells,cal_time))
-    obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L_loc,s,run_type=Run_type)
+    obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L_loc,s,run_type=Run_type,run_number=Run)
     Save_name = "pn{}_cn{}_{}_L_{}".format(npart,ncells,Run,L_loc)
     save_object(obj,"data_{}/{}".format(Run_type,Save_name))
 
@@ -604,16 +604,17 @@ def Compare_runs_TwoStream():
     particle_numbers_loc = [50000]
     cell_numbers_loc = [30]
     Run_Number_loc = list(range(1, 101))
+    run_L_loc = [4.*pi]
     run_objs = []
     for npart in particle_numbers_loc:
         for ncells in cell_numbers_loc:
             for run in Run_Number_loc:
-                Load_name = "pn{}_cn{}_{}".format(npart,ncells,run)
+                Load_name = "pn{}_cn{}_{}_L_{}".format(npart,ncells,run,run_L_loc[1])
                 run_objs.append(load_object("data_{}/{}".format(Run_type,Load_name)))
     growth_rates = []
     growth_rate_errors = []
     for obj in run_objs:
-        print(obj)
+        #print(obj)
         obj.calculate_values()
         growth_rates.append(obj.growth_rate)
         growth_rate_errors.append(obj.growth_error)
@@ -639,13 +640,18 @@ def Compare_runs_TwoStream():
 
     
 def Compare_runs():
-    particle_numbers_loc = [5000,10000,20000,50000,100000,200000]
-    cell_numbers_loc = [30,40,50,60,70,80,90,100]
+    particle_numbers_loc = [1000,2000,5000,10000,20000,50000,100000,200000]
+    #particle_numbers_loc = [50000]
+    cell_numbers_loc = list(range(10, 210,10))
+    Run_Number_loc = list(range(0, 6))
+    run_L_loc = [4.*pi]
     run_objs = []
     for npart in particle_numbers_loc:
         for ncells in cell_numbers_loc:
-            Load_name = "pn{}_cn{}".format(npart,ncells)
-            run_objs.append(load_object("data_{}/{}".format(Run_type,Save_name)))
+            for run in Run_Number_loc:
+                Load_name = "pn{}_cn{}_{}_L_{}".format(npart,ncells,run,run_L_loc[0])
+                run_objs.append(load_object("data_{}/{}".format(Run_type,Load_name)))
+                run_objs[-1].run_number = run
     for obj in run_objs:
         obj.calculate_values()
     #plots at constant cell_number
@@ -664,15 +670,44 @@ def Compare_runs():
         noise_levels = []
         damping_rates = []
         damping_rate_errors = []
-        for obj in run_objs:
-            if obj.ncells == ncells:
-                times.append(obj.cal_time)
-                particle_number.append(obj.npart)
-                frequencies.append(obj.frequency)
-                frequency_errors.append(obj.frequency_error)
-                noise_levels.append(obj.noise_level)
-                damping_rates.append(obj.damping_rate)
-                damping_rate_errors.append(obj.damping_error)
+        for particle_num in particle_numbers_loc:
+            times_av = []
+            particle_number_av = []
+            frequencies_av = []
+            frequency_errors_av = []
+            noise_levels_av = []
+            damping_rates_av = []
+            damping_rate_errors_av = []
+            for run in Run_Number_loc:
+                for obj in run_objs:
+                    # print("comparison")
+                    # print(obj.ncells)
+                    # print(ncells)
+                    # print(obj.npart)
+                    # print(particle_num)
+                    # print(obj.run_number)
+                    # print(run)
+                    # print(obj.ncells == ncells and obj.npart == particle_num and obj.run_number == run)
+                    # print(obj.ncells == ncells)
+                    # print(obj.npart == particle_num)
+                    # print(obj.run_number == run)
+                    if obj.ncells == ncells and obj.npart == particle_num and obj.run_number == run:
+                        #print("true")
+                        times_av.append(obj.cal_time)
+                        particle_number_av.append(obj.npart)
+                        frequencies_av.append(obj.frequency)
+                        frequency_errors_av.append(obj.frequency_error)
+                        noise_levels_av.append(obj.noise_level)
+                        damping_rates_av.append(obj.damping_rate)
+                        damping_rate_errors_av.append(obj.damping_error)
+            times.append(np.mean(times_av))
+            particle_number.append(np.mean(particle_number_av))
+            frequencies.append(np.mean(frequencies_av))
+            frequency_errors.append(np.mean(frequency_errors_av))
+            noise_levels.append(np.mean(noise_levels_av))
+            damping_rates.append(np.mean(damping_rates_av))
+            damping_rate_errors.append(np.mean(damping_rate_errors_av))
+            
         times_2d.append(times)
         particle_number_2d.append(particle_number)
         frequencies_2d.append(frequencies)
@@ -692,7 +727,7 @@ def Compare_runs():
     
     for n in range (0,len(cell_numbers_loc)):
         axs[0,1].plot(particle_number_2d[n],frequencies_2d[n])
-        axs[0,1].fill_between(particle_number_2d[n],np.array(frequencies_2d[n])+np.array(frequency_errors_2d[n]),np.array(frequencies_2d[n])-np.array(frequency_errors_2d[n]),alpha=0.2)
+        #axs[0,1].fill_between(particle_number_2d[n],np.array(frequencies_2d[n])+np.array(frequency_errors_2d[n]),np.array(frequencies_2d[n])-np.array(frequency_errors_2d[n]),alpha=0.2)
     axs[0,1].set_xlabel("Particle Number")
     axs[0,1].set_ylabel("Frequencies (Hz)")
     axs[0,1].set_ylim(0.18, 0.24)
@@ -702,13 +737,13 @@ def Compare_runs():
     for n in range (0,len(cell_numbers_loc)):
         axs[1,0].plot(particle_number_2d[n],noise_levels_2d[n])
     axs[1,0].set_xlabel("Particle Number")
-    axs[1,0].set_ylabel("Noise Level")
+    axs[1,0].set_ylabel("Signal Strength")
    
     #damping rates plots
  
     for n in range (0,len(cell_numbers_loc)):
         axs[1,1].plot(particle_number_2d[n],damping_rates_2d[n])
-        axs[1,1].fill_between(particle_number_2d[n], np.array(damping_rates_2d[n])-np.array(damping_rates_errors_2d[n]), np.array(damping_rates_2d[n])+np.array(damping_rates_errors_2d[n]),alpha=0.2)
+        #axs[1,1].fill_between(particle_number_2d[n], np.array(damping_rates_2d[n])-np.array(damping_rates_errors_2d[n]), np.array(damping_rates_2d[n])+np.array(damping_rates_errors_2d[n]),alpha=0.2)
     axs[1,1].set_xlabel("Particle Number")
     axs[1,1].set_ylabel("Damping Rate")
     fig.suptitle("Plots at constant Cell Number", fontsize=16)
@@ -718,7 +753,7 @@ def Compare_runs():
     plt.ioff() # This so that the windows stay open
 
 
-    #plots at constant Particle number
+    #plots at constant Cell Number
     times_2d = []
     cell_number_2d = []
     frequencies_2d = []
@@ -726,7 +761,7 @@ def Compare_runs():
     noise_levels_2d = []
     damping_rates_2d = []
     damping_rates_errors_2d = []
-    for npart in particle_numbers_loc:
+    for nparticle in particle_numbers_loc:
         times = []
         cell_number = []
         frequencies = []
@@ -734,15 +769,32 @@ def Compare_runs():
         noise_levels = []
         damping_rates = []
         damping_rate_errors = []
-        for obj in run_objs:
-            if obj.npart == npart:
-                times.append(obj.cal_time)
-                cell_number.append(obj.ncells)
-                frequencies.append(obj.frequency)
-                frequency_errors.append(obj.frequency_error)
-                noise_levels.append(obj.noise_level)
-                damping_rates.append(obj.damping_rate)
-                damping_rate_errors.append(obj.damping_error)
+        for cell_num in cell_numbers_loc:
+            times_av = []
+            cell_number_av = []
+            frequencies_av = []
+            frequency_errors_av = []
+            noise_levels_av = []
+            damping_rates_av = []
+            damping_rate_errors_av = []
+            for run in Run_Number_loc:
+                for obj in run_objs:
+                    if obj.npart == nparticle and obj.ncells== cell_num and obj.run_number == run:
+                        times_av.append(obj.cal_time)
+                        cell_number_av.append(obj.ncells)
+                        frequencies_av.append(obj.frequency)
+                        frequency_errors_av.append(obj.frequency_error)
+                        noise_levels_av.append(obj.noise_level)
+                        damping_rates_av.append(obj.damping_rate)
+                        damping_rate_errors_av.append(obj.damping_error)
+            times.append(np.mean(times_av))
+            cell_number.append(np.mean(cell_number_av))
+            frequencies.append(np.mean(frequencies_av))
+            frequency_errors.append(np.mean(frequency_errors_av))
+            noise_levels.append(np.mean(noise_levels_av))
+            damping_rates.append(np.mean(damping_rates_av))
+            damping_rate_errors.append(np.mean(damping_rate_errors_av))
+            
         times_2d.append(times)
         cell_number_2d.append(cell_number)
         frequencies_2d.append(frequencies)
@@ -763,7 +815,7 @@ def Compare_runs():
     
     for n in range (0,len(particle_numbers_loc)):
         axs[0,1].plot(cell_number_2d[n],frequencies_2d[n])
-        axs[0,1].fill_between(cell_number_2d[n],np.array(frequencies_2d[n])+np.array(frequency_errors_2d[n]),np.array(frequencies_2d[n])-np.array(frequency_errors_2d[n]),alpha=0.2)
+        #axs[0,1].fill_between(cell_number_2d[n],np.array(frequencies_2d[n])+np.array(frequency_errors_2d[n]),np.array(frequencies_2d[n])-np.array(frequency_errors_2d[n]),alpha=0.2)
     #axs[0,1].legend()
     axs[0,1].set_xlabel("Cell Number")
     axs[0,1].set_ylabel("Frequency (Hz)")
@@ -774,13 +826,13 @@ def Compare_runs():
         axs[1,0].plot(cell_number_2d[n],noise_levels_2d[n])
     #axs[1,0].legend()
     axs[1,0].set_xlabel("Cell Number")
-    axs[1,0].set_ylabel("Noise Level")
+    axs[1,0].set_ylabel("Signal Strength")
    
     #Damping Rates plots
  
     for n in range (0,len(particle_numbers_loc)):
         axs[1,1].plot(cell_number_2d[n],damping_rates_2d[n])
-        axs[1,1].fill_between(cell_number_2d[n], np.array(damping_rates_2d[n])-np.array(damping_rates_errors_2d[n]), np.array(damping_rates_2d[n])+np.array(damping_rates_errors_2d[n]),alpha=0.2)
+        #axs[1,1].fill_between(cell_number_2d[n], np.array(damping_rates_2d[n])-np.array(damping_rates_errors_2d[n]), np.array(damping_rates_2d[n])+np.array(damping_rates_errors_2d[n]),alpha=0.2)
     #axs[1,1].legend()
     axs[1,1].set_xlabel("Cell Numbers")
     axs[1,1].set_ylabel("Damping Rate")
@@ -794,8 +846,8 @@ def Compare_runs():
     
 
 if __name__ == "__main__":
-    run_list()
-    #Compare_runs_TwoStream()
+    #run_list()
+    Compare_runs()
     # if Load == 0:
     #     random.seed(0)
     #     # Generate initial condition
