@@ -14,6 +14,7 @@ from joblib import Parallel, delayed
 from itertools import product
 import joblib
 from scipy.stats import gaussian_kde
+from scipy.integrate import solve_ivp
 
 import matplotlib.pyplot as plt # Matplotlib plotting library
 
@@ -45,6 +46,7 @@ def rk4step(f, y0, dt, args=()):
     k4 = f(y0 + dt*k3, *args)
 
     return y0 + (k1 + 2.*k2 + 2.*k3 + k4)*dt / 6.
+
 
 def calc_density_vec(position, ncells, L):
 
@@ -135,7 +137,7 @@ def fft_integrate(y):
     return ifft(f).real # Reverse Fourier Transform
    
 
-def pic(f, ncells, L):
+def pic(t,f, ncells, L):
     """ f contains the position and velocity of all particles
     """
     nparticles = len(f) // 2     # Two values for each particle
@@ -171,32 +173,51 @@ def run(pos, vel, L, ncells=None, out=[], output_times=linspace(0,20,100), cfl=0
 
     dx = L / float(ncells)
     
-    f = concatenate( (pos, vel) )   # Starting state
+    f_start = concatenate( (pos, vel) )   # Starting state
     nparticles = len(pos)
     
     time = 0.0
-    for tnext in output_times:
-        # Advance to tnext
-        stepping = True
-        while stepping:
-            # Maximum distance a particle can move is one cell
-            dt = cfl * dx / max(abs(vel))
-            if time + dt >= tnext:
-                # Next time will hit or exceed required output time
-                stepping = False
-                dt = tnext - time
-            f = rk4step(pic, f, dt, args=(ncells, L))
-            time += dt
-            
-        # Extract position and velocities
-        pos = ((f[0:nparticles] % L) + L) % L
-        vel = f[nparticles:]
-        
-        # Send to output functions
+    t_span  = [time,output_times[-1]]
+    f = solve_ivp(pic,t_span,f_start,args = (ncells, L),t_eval=output_times)
+    # print(pos)
+    # print(vel)
+
+
+   # Extract and process positions and velocities
+    pos_all = ((f.y[:nparticles, :] % L) + L) % L  # Normalize positions for all times
+    vel_all = f.y[nparticles:, :]                 # Velocities for all times
+
+    # Call output functions for each time step
+    for n, current_time in enumerate(output_times):
         for func in out:
-            func(pos, vel, ncells, L, time)
+            func(pos_all[:, n], vel_all[:, n], ncells, L, current_time)
+
+
+    #     # Advance to tnext
+    #     stepping = True
+    #     while stepping:
+    #         # Maximum distance a particle can move is one cell
+    #         dt = cfl * dx / max(abs(vel))
+    #         if time + dt >= tnext:
+    #             # Next time will hit or exceed required output time
+    #             stepping = False
+    #             dt = tnext - time
+    #         f = rk4step(pic, f, dt, args=(ncells, L))
+    #         #f = solve_ivp(pic,dt,args = (ncells, L))
+    #         time += dt to output functions
+        # for func in out:
+        #     func(pos, vel, ncells, L, time)
+            
+        #Extract position and velocities
+        # print(f(tnext))
+        # pos = ((f.y[0:nparticles] % L) + L) % L
+        # vel = f.y[nparticles:]
         
-    return pos, vel
+        #Send to output functions
+        # for func in out:
+        #     func(pos, vel, ncells, L, time)
+        
+    return pos_all[:, -1], vel_all[:, -1]
 
 ####################################################################
 # 
@@ -306,7 +327,7 @@ def twostream(npart, L, vbeam=2):
 Load  = 0
 Save_name = "data_TwoStream/pn50000_cn20_2.pickle"
 Load_name = "data_TwoStream/pn50000_cn20.pickle"
-Run_type = "TwoStream"
+Run_type = "Landau"
 
 import pickle
  
@@ -767,40 +788,40 @@ def Compare_runs():
 
 if __name__ == "__main__":
     #run_list()
-    Compare_runs_TwoStream()
-    # if Load == 0:
-    #     # Generate initial condition
-    #     npart = 50000   
-    #     if Run_type == "TwoStream":
-    #         # 2-stream instability
-    #         L = 100
-    #         ncells = 50
-    #         pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
-    #     elif Run_type == "Landau":
-    #         # Landau damping
-    #         L = 4.*pi
-    #         ncells = 20
-    #         pos, vel = landau(npart, L)
-    #     # Create some output classes
-    #     p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
-    #     s = Summary()                 # Calculates, stores and prints summary info
+    #Compare_runs_TwoStream()
+    if Load == 0:
+        # Generate initial condition
+        npart = 50000
+        if Run_type == "TwoStream":
+            # 2-stream instability
+            L = 100
+            ncells = 50
+            pos, vel = twostream(npart, L, 3.) # Might require more npart than Landau!
+        elif Run_type == "Landau":
+            # Landau damping
+            L = 4.*pi
+            ncells = 20
+            pos, vel = landau(npart, L)
+        # Create some output classes
+        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+        s = Summary()                 # Calculates, stores and prints summary info
 
-    #     diagnostics_to_run = [p,s]   # Remove p to get much faster code!
+        diagnostics_to_run = [s]   # Remove p to get much faster code!
         
 
-    #     # Run the simulation
-    #     time_start = time.perf_counter()
-    #     pos, vel = run(pos, vel, L, ncells, 
-    #                 out = diagnostics_to_run,        # These are called each output step
-    #                 output_times=linspace(0.,80,200)) # The times to output
-    #     time_end= time.perf_counter()
-    #     cal_time = time_end-time_start
-    #     obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s,run_type=Run_type)
-    #     print(cal_time)
-    #     save_object(obj,Save_name)
-    #     obj.plot()
-    # elif Load == 1:
-    #     obj = load_object(Load_name)
-    #     pos,vel,ncells,L,s = obj.pos,obj.vel,obj.ncells,obj.L,obj.s
-    #     p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
-    #     obj.plot()
+        # Run the simulation
+        time_start = time.perf_counter()
+        pos, vel = run(pos, vel, L, ncells, 
+                    out = diagnostics_to_run,        # These are called each output step
+                    output_times=linspace(0.,80,200)) # The times to output
+        time_end= time.perf_counter()
+        cal_time = time_end-time_start
+        obj = Run_Outcome(pos,vel,npart,ncells,cal_time,L,s,run_type=Run_type)
+        print("cal_time{}".format(cal_time))
+        save_object(obj,Save_name)
+        obj.plot()
+    elif Load == 1:
+        obj = load_object(Load_name)
+        pos,vel,ncells,L,s = obj.pos,obj.vel,obj.ncells,obj.L,obj.s
+        p = Plot(pos, vel, ncells, L) # This displays an animated figure - Slow!
+        obj.plot()
